@@ -8,7 +8,7 @@ from cloudinary.models import CloudinaryField
 # Custom User Model
 class User(AbstractUser):
     display_name = models.CharField(max_length=100, blank=True, verbose_name="Tên hiển thị")
-    avatar = CloudinaryField('avatar', blank=True, null=True, verbose_name="Avatar")
+    avatar = CloudinaryField(blank=True, null=True, verbose_name="Avatar")
     total_points = models.IntegerField(default=0, verbose_name="Tổng điểm")
 
     class Meta:
