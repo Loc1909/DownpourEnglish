@@ -13,18 +13,42 @@ from .models import (
 
 # Custom User Admin
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'display_name', 'total_points', 'is_staff', 'date_joined')
+    list_display = ('username', 'email', 'display_name', 'avatar_display', 'total_points', 'is_staff', 'date_joined')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'date_joined')
     search_fields = ('username', 'email', 'display_name')
     ordering = ('-date_joined',)
 
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Thông tin bổ sung', {
-            'fields': ('display_name', 'avatar', 'total_points')
+            'fields': ('display_name', 'avatar', 'avatar_preview', 'total_points')
         }),
     )
 
-    readonly_fields = ('total_points', 'date_joined', 'last_login')
+    readonly_fields = ('total_points', 'date_joined', 'last_login', 'avatar_preview')
+
+    def avatar_display(self, obj):
+        """Hiển thị avatar nhỏ trong danh sách"""
+        if obj.avatar:
+            return format_html(
+                '<img src="{}" width="40" height="40" style="border-radius: 50%; object-fit: cover;" />',
+                obj.avatar.url
+            )
+        return format_html(
+            '<div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Img</div>')
+
+    avatar_display.short_description = 'Avatar'
+
+    def avatar_preview(self, obj):
+        """Hiển thị avatar lớn trong form chi tiết"""
+        if obj.avatar:
+            return format_html(
+                '<img src="{}" width="150" height="150" style="border-radius: 10px; object-fit: cover; border: 2px solid #ddd;" />',
+                obj.avatar.url
+            )
+        return format_html(
+            '<div style="width: 150px; height: 150px; background: #f0f0f0; border: 2px dashed #ccc; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #999;">Chưa có ảnh</div>')
+
+    avatar_preview.short_description = 'Xem trước Avatar'
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(
@@ -38,14 +62,88 @@ class TopicAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'created_at')
     search_fields = ('name', 'description')
     ordering = ('name',)
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at', 'icon_preview')
+
+    # Thêm trường icon_preview vào fieldsets
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('name', 'description')
+        }),
+        ('Thiết lập Icon', {
+            'fields': ('icon', 'icon_preview')
+        }),
+        ('Trạng thái', {
+            'fields': ('is_active',)
+        }),
+        ('Thông tin thời gian', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        })
+    )
 
     def icon_display(self, obj):
+        """Hiển thị icon nhỏ trong danh sách"""
         if obj.icon:
-            return format_html('<i class="{}"></i> {}', obj.icon, obj.icon)
-        return '-'
+            return format_html(
+                '<i class="{}" style="font-size: 16px; color: #007cba;"></i> <span style="margin-left: 8px; font-size: 12px; color: #666;">{}</span>',
+                obj.icon, obj.icon
+            )
+        return format_html('<span style="color: #999;">Chưa có icon</span>')
 
     icon_display.short_description = 'Icon'
+
+    def icon_preview(self, obj):
+        """Hiển thị icon lớn trong form chi tiết"""
+        if obj.icon:
+            return format_html(
+                '''
+                <div style="padding: 20px; border: 2px solid #ddd; border-radius: 8px; background: #f9f9f9; text-align: center; width: 200px;">
+                    <i class="{}" style="font-size: 48px; color: #007cba; margin-bottom: 10px;"></i>
+                    <br>
+                    <span style="font-size: 14px; color: #333; font-weight: bold;">{}</span>
+                    <br>
+                    <span style="font-size: 12px; color: #666;">Class: {}</span>
+                </div>
+                <br>
+                <div style="margin-top: 15px; padding: 10px; background: #e8f4fd; border-radius: 4px;">
+                    <strong>Gợi ý một số icon phổ biến:</strong><br>
+                    <div style="margin-top: 8px;">
+                        <span style="margin-right: 15px;"><i class="fas fa-book"></i> fas fa-book</span>
+                        <span style="margin-right: 15px;"><i class="fas fa-language"></i> fas fa-language</span>
+                        <span style="margin-right: 15px;"><i class="fas fa-graduation-cap"></i> fas fa-graduation-cap</span>
+                        <br><br>
+                        <span style="margin-right: 15px;"><i class="fas fa-music"></i> fas fa-music</span>
+                        <span style="margin-right: 15px;"><i class="fas fa-calculator"></i> fas fa-calculator</span>
+                        <span style="margin-right: 15px;"><i class="fas fa-flask"></i> fas fa-flask</span>
+                    </div>
+                </div>
+                ''',
+                obj.icon, obj.name, obj.icon
+            )
+        return format_html(
+            '''
+            <div style="padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: #f0f0f0; text-align: center; width: 200px; color: #999;">
+                <i class="fas fa-image" style="font-size: 48px; margin-bottom: 10px;"></i>
+                <br>
+                <span>Chưa có icon</span>
+            </div>
+            <br>
+            <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 4px;">
+                <strong>Gợi ý một số icon phổ biến:</strong><br>
+                <div style="margin-top: 8px;">
+                    <span style="margin-right: 15px;"><i class="fas fa-book"></i> fas fa-book</span>
+                    <span style="margin-right: 15px;"><i class="fas fa-language"></i> fas fa-language</span>
+                    <span style="margin-right: 15px;"><i class="fas fa-graduation-cap"></i> fas fa-graduation-cap</span>
+                    <br><br>
+                    <span style="margin-right: 15px;"><i class="fas fa-music"></i> fas fa-music</span>
+                    <span style="margin-right: 15px;"><i class="fas fa-calculator"></i> fas fa-calculator</span>
+                    <span style="margin-right: 15px;"><i class="fas fa-flask"></i> fas fa-flask</span>
+                </div>
+            </div>
+            '''
+        )
+
+    icon_preview.short_description = 'Xem trước Icon'
 
     def flashcard_sets_count(self, obj):
         return obj.flashcardset_set.count()
@@ -57,12 +155,16 @@ class TopicAdmin(admin.ModelAdmin):
             sets_count=Count('flashcardset')
         )
 
+    class Media:
+        css = {
+            'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',)
+        }
 
 # Inline for Flashcards in FlashcardSet
 class FlashcardInline(admin.TabularInline):
     model = Flashcard
     extra = 1
-    fields = ('vietnamese', 'english', 'pronunciation', 'word_type')
+    fields = ('vietnamese', 'english', 'word_type')
     show_change_link = True
 
 
@@ -121,13 +223,13 @@ class FlashcardSetAdmin(admin.ModelAdmin):
 class FlashcardAdmin(admin.ModelAdmin):
     list_display = ('vietnamese', 'english', 'word_type', 'flashcard_set', 'created_at')
     list_filter = ('word_type', 'flashcard_set__topic', 'created_at')
-    search_fields = ('vietnamese', 'english', 'pronunciation')
+    search_fields = ('vietnamese', 'english')
     ordering = ('-created_at',)
     readonly_fields = ('created_at',)
 
     fieldsets = (
         ('Từ vựng', {
-            'fields': ('vietnamese', 'english', 'pronunciation', 'word_type')
+            'fields': ('vietnamese', 'english', 'word_type')
         }),
         ('Ví dụ', {
             'fields': ('example_sentence_en',)
@@ -137,6 +239,12 @@ class FlashcardAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+
+    def save_model(self, request, obj, form, change):
+        """Override để cập nhật số thẻ sau khi save"""
+        super().save_model(request, obj, form, change)
+        # Signal sẽ tự động cập nhật, nhưng để chắc chắn:
+        obj.flashcard_set.update_total_cards()
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('flashcard_set', 'flashcard_set__topic')

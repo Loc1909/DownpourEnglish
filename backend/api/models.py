@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from cloudinary.models import CloudinaryField
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 
 
 # Custom User Model
@@ -71,8 +73,25 @@ class FlashcardSet(models.Model):
         return self.title
 
     def update_total_cards(self):
+        """Cập nhật tổng số thẻ"""
         self.total_cards = self.flashcards.count()
-        self.save()
+        self.save(update_fields=['total_cards'])
+
+    def update_average_rating(self):
+        """Cập nhật điểm trung bình"""
+        from django.db.models import Avg
+        avg_rating = SavedFlashcardSet.objects.filter(
+            flashcard_set=self,
+            rating__isnull=False
+        ).aggregate(avg=Avg('rating'))['avg']
+
+        self.average_rating = round(avg_rating, 1) if avg_rating else 0.0
+        self.save(update_fields=['average_rating'])
+
+    def update_total_saves(self):
+        """Cập nhật tổng lượt lưu"""
+        self.total_saves = SavedFlashcardSet.objects.filter(flashcard_set=self).count()
+        self.save(update_fields=['total_saves'])
 
 
 # Model cho thẻ flashcard riêng lẻ
@@ -80,7 +99,6 @@ class Flashcard(models.Model):
     flashcard_set = models.ForeignKey(FlashcardSet, related_name='flashcards', on_delete=models.CASCADE)
     vietnamese = models.CharField(max_length=500, verbose_name="Tiếng Việt")
     english = models.CharField(max_length=500, verbose_name="Tiếng Anh")
-    pronunciation = models.CharField(max_length=200, blank=True, verbose_name="Phiên âm")
     example_sentence_en = models.TextField(blank=True, verbose_name="Câu ví dụ tiếng Anh")
 
     word_type = models.CharField(
@@ -326,3 +344,39 @@ class DailyStats(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.date}"
+
+    # SIGNALS - Tự động cập nhật khi có thay đổi
+
+
+@receiver(post_save, sender=Flashcard)
+def update_flashcard_count_on_save(sender, instance, created, **kwargs):
+    """Cập nhật số thẻ khi thêm flashcard mới"""
+    if created:
+        instance.flashcard_set.update_total_cards()
+
+
+@receiver(post_delete, sender=Flashcard)
+def update_flashcard_count_on_delete(sender, instance, **kwargs):
+    """Cập nhật số thẻ khi xóa flashcard"""
+    try:
+        instance.flashcard_set.update_total_cards()
+    except FlashcardSet.DoesNotExist:
+        pass
+
+
+@receiver(post_save, sender=SavedFlashcardSet)
+def update_flashcard_set_stats_on_save(sender, instance, created, **kwargs):
+    """Cập nhật thống kê khi lưu/đánh giá bộ flashcard"""
+    instance.flashcard_set.update_total_saves()
+    if instance.rating:
+        instance.flashcard_set.update_average_rating()
+
+
+@receiver(post_delete, sender=SavedFlashcardSet)
+def update_flashcard_set_stats_on_delete(sender, instance, **kwargs):
+    """Cập nhật thống kê khi bỏ lưu bộ flashcard"""
+    try:
+        instance.flashcard_set.update_total_saves()
+        instance.flashcard_set.update_average_rating()
+    except FlashcardSet.DoesNotExist:
+        pass

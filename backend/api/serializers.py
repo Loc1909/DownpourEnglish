@@ -73,7 +73,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Flashcard
-        fields = ['id', 'vietnamese', 'english', 'pronunciation',
+        fields = ['id', 'vietnamese', 'english',
                   'example_sentence_en', 'word_type', 'user_progress']
 
 
@@ -216,7 +216,7 @@ class CreateFlashcardSetSerializer(serializers.ModelSerializer):
 class CreateFlashcardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flashcard
-        fields = ['flashcard_set', 'vietnamese', 'english', 'pronunciation',
+        fields = ['flashcard_set', 'vietnamese', 'english',
                   'example_sentence_en', 'word_type']
 
 
