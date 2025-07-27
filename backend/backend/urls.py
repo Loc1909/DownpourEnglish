@@ -19,7 +19,7 @@ schema_view = get_schema_view(
         title="Flashcard Learning API",
         default_version='v1',
         description="API for English Flashcard Learning App with gamification",
-        contact=openapi.Contact(email="admin@flashcardapp.com"),
+        contact=openapi.Contact(email="93.nguyentanloc2018@gmail.com"),
         license=openapi.License(name="MIT License"),
     ),
     public=True,

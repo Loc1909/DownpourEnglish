@@ -16,7 +16,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -26,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'drf_yasg',
     'rest_framework',
     'corsheaders',
     'cloudinary_storage',
@@ -219,7 +219,6 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -277,4 +276,3 @@ LOGS_DIR.mkdir(exist_ok=True)
 # Đảm bảo file log tồn tại
 LOG_FILE = LOGS_DIR / 'django.log'
 LOG_FILE.touch(exist_ok=True)
-
