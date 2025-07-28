@@ -20,24 +20,47 @@ class BaseSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(BaseSerializer):
+    password = serializers.CharField(write_only=True, required=False)
     avatar = serializers.SerializerMethodField()
 
     def get_avatar(self, obj):
         return obj.avatar.url if obj.avatar else ''
 
     def create(self, validated_data):
+        # Lấy password trước khi tạo user
+        password = validated_data.pop('password', None)
+
+        # Tạo user
         user = User(**validated_data)
-        if 'password' in validated_data:
-            user.set_password(validated_data['password'])
+
+        # Hash và set password nếu có
+        if password:
+            user.set_password(password)
+
         user.save()
         return user
+
+    def update(self, instance, validated_data):
+        # Xử lý password khi update
+        password = validated_data.pop('password', None)
+
+        # Update các field khác
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # Update password nếu có
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+        return instance
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name',
-                  'display_name', 'avatar', 'total_points', 'date_joined']
+                  'display_name', 'avatar', 'total_points', 'date_joined', 'password']
         extra_kwargs = {
-            'password': {'write_only': True},
+            'password': {'write_only': True, 'required': True},  # Bắt buộc khi tạo mới
             'email': {'required': False}
         }
 

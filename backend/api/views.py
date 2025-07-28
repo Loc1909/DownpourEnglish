@@ -233,6 +233,61 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
+    @action(methods=['post'], detail=False, permission_classes=[permissions.AllowAny])
+    def login(self, request):
+        """Đăng nhập bằng username/password truyền thống"""
+        from django.contrib.auth import authenticate
+        from rest_framework.authtoken.models import Token
+
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response({
+                'error': 'Vui lòng nhập username và password'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user = authenticate(username=username, password=password)
+        if user and user.is_active:
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                'message': 'Đăng nhập thành công',
+                'token': token.key,
+                'user': serializers.UserSerializer(user).data
+            })
+
+        return Response({
+            'error': 'Thông tin đăng nhập không chính xác'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(methods=['post'], detail=False, permission_classes=[permissions.AllowAny])
+    def register(self, request):
+        """Đăng ký tài khoản mới"""
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            from rest_framework.authtoken.models import Token
+            token, created = Token.objects.get_or_create(user=user)
+
+            return Response({
+                'message': 'Đăng ký thành công',
+                'token': token.key,
+                'user': serializers.UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['post'], detail=False, permission_classes=[permissions.IsAuthenticated])
+    def logout(self, request):
+        """Đăng xuất (xóa token)"""
+        try:
+            from rest_framework.authtoken.models import Token
+            token = Token.objects.get(user=request.user)
+            token.delete()
+            return Response({'message': 'Đăng xuất thành công'})
+        except Token.DoesNotExist:
+            return Response({'message': 'Token không tồn tại'})
+
     @action(methods=['get', 'patch'], detail=False, permission_classes=[permissions.IsAuthenticated])
     def current_user(self, request):
         """Lấy/cập nhật thông tin user hiện tại"""
