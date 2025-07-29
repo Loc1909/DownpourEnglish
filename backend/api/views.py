@@ -87,28 +87,39 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
             status=status.HTTP_201_CREATED
         )
 
+    # views.py - Fixed save action
     @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
     def save(self, request, pk):
         """Lưu/hủy lưu bộ flashcard"""
         flashcard_set = self.get_object()
-        saved_set, created = SavedFlashcardSet.objects.get_or_create(
-            user=request.user, flashcard_set=flashcard_set
-        )
 
-        if not created:
+        try:
+            # Tìm xem user đã lưu bộ flashcard này chưa
+            saved_set = SavedFlashcardSet.objects.get(
+                user=request.user,
+                flashcard_set=flashcard_set
+            )
+
+            # Nếu đã lưu -> xóa (hủy lưu)
             saved_set.delete()
-            flashcard_set.total_saves = F('total_saves') - 1
             message = "Đã hủy lưu bộ flashcard"
-        else:
-            flashcard_set.total_saves = F('total_saves') + 1
-            message = "Đã lưu bộ flashcard"
+            is_saved = False
 
-        flashcard_set.save()
-        flashcard_set.refresh_from_db()
+        except SavedFlashcardSet.DoesNotExist:
+            # Nếu chưa lưu -> tạo mới (lưu)
+            SavedFlashcardSet.objects.create(
+                user=request.user,
+                flashcard_set=flashcard_set
+            )
+            message = "Đã lưu bộ flashcard"
+            is_saved = True
+
+        # Cập nhật lại total_saves dựa trên số records thực tế
+        flashcard_set.update_total_saves()
 
         return Response({
             'message': message,
-            'is_saved': created,
+            'is_saved': is_saved,
             'total_saves': flashcard_set.total_saves
         })
 
