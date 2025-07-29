@@ -25,7 +25,7 @@ class FirebaseAuthentication(BaseAuthentication):
 
     def authenticate(self, request):
         # Get Firebase token from header
-        firebase_token = request.META.get('HTTP_FIREBASE_TOKEN') or request.META.get('HTTP_AUTHORIZATION')
+        firebase_token = request.META.get('HTTP_FIREBASE_TOKEN')
 
         if not firebase_token:
             return None
