@@ -190,12 +190,16 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
         )
 
         with transaction.atomic():
-            progress.times_reviewed = F('times_reviewed') + 1
+            # Cập nhật số lần ôn tập và số lần đúng
+            progress.times_reviewed += 1
+
             if is_correct:
-                progress.times_correct = F('times_correct') + 1
-                progress.mastery_level = min(100, F('mastery_level') + 10)
+                progress.times_correct += 1
+                # Tăng mastery_level nhưng không vượt quá 100
+                progress.mastery_level = min(100, progress.mastery_level + 10)
             else:
-                progress.mastery_level = max(0, F('mastery_level') - 5)
+                # Giảm mastery_level nhưng không xuống dưới 0
+                progress.mastery_level = max(0, progress.mastery_level - 5)
                 progress.is_difficult = True
 
             progress.last_reviewed = timezone.now()
@@ -203,19 +207,21 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
                 progress.difficulty_rating = difficulty_rating
 
             progress.save()
-            progress.refresh_from_db()
 
             # Cập nhật thống kê hàng ngày
             today = timezone.now().date()
             daily_stats, _ = DailyStats.objects.get_or_create(
                 user=request.user, date=today
             )
-            daily_stats.cards_studied = F('cards_studied') + 1
-            if created:
-                daily_stats.new_words_learned = F('new_words_learned') + 1
-            else:
-                daily_stats.words_reviewed = F('words_reviewed') + 1
-            daily_stats.save()
+
+            # Sử dụng F() expression cho daily_stats
+            DailyStats.objects.filter(
+                user=request.user, date=today
+            ).update(
+                cards_studied=F('cards_studied') + 1,
+                new_words_learned=F('new_words_learned') + (1 if created else 0),
+                words_reviewed=F('words_reviewed') + (0 if created else 1)
+            )
 
         return Response({
             'message': 'Đã cập nhật tiến trình học tập',
@@ -384,24 +390,34 @@ class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.List
     def leaderboard(self, request):
         """Bảng xếp hạng game"""
         game_type = request.query_params.get('game_type')
-        queryset = GameSession.objects.values('user').annotate(
+
+        # Bắt đầu với queryset cơ bản
+        queryset = GameSession.objects.all()
+
+        # Filter TRƯỚC khi aggregate và slice
+        if game_type:
+            queryset = queryset.filter(game_type=game_type)
+
+        # Sau đó mới aggregate, order và slice
+        queryset = queryset.values('user').annotate(
             best_score=Max('score'),
             total_games=Count('id')
         ).order_by('-best_score')[:10]
 
-        if game_type:
-            queryset = queryset.filter(game_type=game_type)
-
         # Transform data
         leaderboard_data = []
         for i, item in enumerate(queryset, 1):
-            user = User.objects.get(id=item['user'])
-            leaderboard_data.append({
-                'rank': i,
-                'user': serializers.UserSerializer(user).data,
-                'best_score': item['best_score'],
-                'total_games': item['total_games']
-            })
+            try:
+                user = User.objects.get(id=item['user'])
+                leaderboard_data.append({
+                    'rank': i,
+                    'user': serializers.UserSerializer(user).data,
+                    'best_score': item['best_score'],
+                    'total_games': item['total_games']
+                })
+            except User.DoesNotExist:
+                # Skip nếu user không tồn tại
+                continue
 
         return Response(leaderboard_data)
 
