@@ -78,7 +78,8 @@ export const authAPI = {
 
 // Topics API
 export const topicsAPI = {
-  getAll: (): Promise<AxiosResponse<Topic[]>> =>
+  // Sửa lại return type để match với backend pagination
+  getAll: (): Promise<AxiosResponse<PaginatedResponse<Topic>>> =>
     api.get('/topics/'),
   
   getFlashcardSets: (topicId: number): Promise<AxiosResponse<FlashcardSet[]>> =>

@@ -13,16 +13,18 @@ import {
   MusicalNoteIcon,
 } from '@heroicons/react/24/outline';
 import { topicsAPI } from '../services/api';
+import { Topic } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 
 const TopicsPage: React.FC = () => {
-  const { data: topicsData, isLoading, error } = useQuery({
+  const { data: topicsResponse, isLoading, error } = useQuery({
     queryKey: ['topics'],
     queryFn: () => topicsAPI.getAll(),
   });
 
-  const topics = topicsData?.data || [];
+  // Bây giờ lấy data từ response.data.results (đúng với PaginatedResponse)
+  const topics: Topic[] = topicsResponse?.data?.results || [];
 
   const getTopicIcon = (iconName: string) => {
     const iconMap: { [key: string]: React.ComponentType<any> } = {
@@ -113,7 +115,7 @@ const TopicsPage: React.FC = () => {
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
       >
-        {topics.map((topic, index) => {
+        {topics.map((topic: Topic, index: number) => {
           const IconComponent = getTopicIcon(topic.icon);
           const gradientColor = getTopicColor(index);
 

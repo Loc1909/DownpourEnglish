@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useAuthStore } from './store/authStore';
+import { useAuthStore, setQueryClient } from './store/authStore';
 
 // Components
 import Layout from './components/layout/Layout';
@@ -35,6 +35,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Set queryClient in auth store
+setQueryClient(queryClient);
 
 function App() {
   const { loadUser, isLoading } = useAuthStore();

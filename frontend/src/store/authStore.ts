@@ -28,6 +28,13 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
 }
 
+// Import queryClient để có thể invalidate queries
+let queryClient: any = null;
+
+export const setQueryClient = (client: any) => {
+  queryClient = client;
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -56,6 +63,11 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          // Invalidate all queries when login success
+          if (queryClient) {
+            queryClient.invalidateQueries();
+          }
 
           toast.success(message || 'Đăng nhập thành công!');
         } catch (error: any) {
@@ -86,6 +98,11 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
+          // Invalidate all queries when register success
+          if (queryClient) {
+            queryClient.invalidateQueries();
+          }
+
           toast.success(message || 'Đăng ký thành công!');
         } catch (error: any) {
           const errorMessage = error.response?.data?.error || 
@@ -115,6 +132,11 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
+          // Clear all React Query cache when logout
+          if (queryClient) {
+            queryClient.clear();
+          }
+
           toast.success('Đăng xuất thành công!');
         }
       },
@@ -139,6 +161,25 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          // Invalidate user-specific queries when loading user
+          if (queryClient) {
+            queryClient.invalidateQueries({
+              predicate: (query: any) => {
+                // Invalidate queries that depend on user data
+                const userSpecificQueries = [
+                  'studySummary',
+                  'userAchievements',
+                  'savedSets',
+                  'userProgress',
+                  'dailyStats'
+                ];
+                return userSpecificQueries.some(key => 
+                  query.queryKey.includes(key)
+                );
+              }
+            });
+          }
         } catch (error: any) {
           console.error('Load user error:', error);
           
@@ -168,6 +209,13 @@ export const useAuthStore = create<AuthState>()(
             user: updatedUser,
             isLoading: false,
           });
+
+          // Invalidate user-related queries
+          if (queryClient) {
+            queryClient.invalidateQueries({
+              queryKey: ['studySummary']
+            });
+          }
 
           toast.success('Cập nhật thông tin thành công!');
         } catch (error: any) {

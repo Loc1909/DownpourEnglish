@@ -11,8 +11,8 @@ import {
   BookmarkIcon,
   StarIcon,
   UsersIcon,
-  ClockIcon,
-  AdjustmentsHorizontalIcon,
+  //ClockIcon,
+  //AdjustmentsHorizontalIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 
@@ -51,12 +51,13 @@ const FlashcardSetsPage: React.FC = () => {
   });
 
   // Fetch topics for filter
-  const { data: topics } = useQuery({
+  const { data: topicsData } = useQuery({
     queryKey: ['topics'],
     queryFn: () => topicsAPI.getAll(),
   });
 
   const flashcardSets = flashcardSetsData?.data.results || [];
+  const topics = topicsData?.data.results || [];
 
   const handleSaveSet = async (setId: number) => {
     try {
@@ -201,7 +202,7 @@ const FlashcardSetsPage: React.FC = () => {
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Tất cả chủ đề</option>
-                    {topics?.data.map((topic: Topic) => (
+                    {topics.map((topic: Topic) => (
                       <option key={topic.id} value={topic.id}>
                         {topic.name}
                       </option>
