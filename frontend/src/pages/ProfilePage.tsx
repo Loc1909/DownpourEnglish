@@ -30,7 +30,7 @@ const ProfilePage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  // Queries
+  // Queries - Fixed to handle proper response format
   const { data: studySummary, isLoading: summaryLoading } = useQuery({
     queryKey: ['studySummary'],
     queryFn: () => userAPI.getStudySummary().then(res => res.data),
@@ -45,6 +45,10 @@ const ProfilePage: React.FC = () => {
     queryKey: ['savedSets'],
     queryFn: () => userAPI.getSavedSets().then(res => res.data),
   });
+
+  // Take only first 4 achievements and 5 saved sets for display
+  const displayAchievements = (userAchievements || []).slice(0, 4);
+  const displaySavedSets = (savedSets || []).slice(0, 5);
 
   // Mutations
   const updateProfileMutation = useMutation({
@@ -256,9 +260,9 @@ const ProfilePage: React.FC = () => {
               </Button>
             </div>
 
-            {userAchievements && userAchievements.length > 0 ? (
+            {displayAchievements && displayAchievements.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userAchievements.slice(0, 4).map((userAchievement) => (
+                {displayAchievements.map((userAchievement) => (
                   <motion.div
                     key={userAchievement.id}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -316,9 +320,9 @@ const ProfilePage: React.FC = () => {
               </Button>
             </div>
 
-            {savedSets && savedSets.length > 0 ? (
+            {displaySavedSets && displaySavedSets.length > 0 ? (
               <div className="space-y-4">
-                {savedSets.slice(0, 5).map((saved) => (
+                {displaySavedSets.map((saved) => (
                   <motion.div
                     key={saved.id}
                     initial={{ opacity: 0, x: -20 }}

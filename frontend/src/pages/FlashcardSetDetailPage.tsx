@@ -15,7 +15,7 @@ import {
   ChartBarIcon,
   EyeIcon,
   PencilIcon,
-  TrashIcon,
+  //TrashIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 

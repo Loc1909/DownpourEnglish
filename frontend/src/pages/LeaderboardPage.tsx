@@ -8,7 +8,7 @@ import {
   StarIcon,
   UserIcon,
   ChartBarIcon,
-  FireIcon
+  //FireIcon
 } from '@heroicons/react/24/outline';
 import { gameAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';

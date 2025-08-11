@@ -11,16 +11,17 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  
+
   // Actions
   login: (username: string, password: string) => Promise<void>;
-  register: (userData: {
+  register: (userData: FormData | {
     username: string;
     password: string;
     email: string;
     first_name?: string;
     last_name?: string;
     display_name?: string;
+    avatar?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
@@ -50,7 +51,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (username: string, password: string) => {
         try {
           set({ isLoading: true });
-          
+
           const response = await authAPI.login(username, password);
           const { token, user, message } = response.data;
 
@@ -71,20 +72,29 @@ export const useAuthStore = create<AuthState>()(
 
           toast.success(message || 'Đăng nhập thành công!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.error || 
-                              error.response?.data?.detail || 
-                              'Đăng nhập thất bại';
-          
+          const errorMessage = error.response?.data?.error ||
+            error.response?.data?.detail ||
+            'Đăng nhập thất bại';
+
           set({ isLoading: false });
           toast.error(errorMessage);
           throw error;
         }
       },
 
-      register: async (userData) => {
+      register: async (userData: FormData | {
+        username: string;
+        password: string;
+        email: string;
+        first_name?: string;
+        last_name?: string;
+        display_name?: string;
+        avatar?: string;
+      }) => {
         try {
           set({ isLoading: true });
-          
+
+          // Sử dụng authAPI.register với userData có thể là FormData hoặc object
           const response = await authAPI.register(userData);
           const { token, user, message } = response.data;
 
@@ -105,10 +115,10 @@ export const useAuthStore = create<AuthState>()(
 
           toast.success(message || 'Đăng ký thành công!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.error || 
-                              error.response?.data?.detail || 
-                              'Đăng ký thất bại';
-          
+          const errorMessage = error.response?.data?.error ||
+            error.response?.data?.detail ||
+            'Đăng ký thất bại';
+
           set({ isLoading: false });
           toast.error(errorMessage);
           throw error;
@@ -124,7 +134,7 @@ export const useAuthStore = create<AuthState>()(
           // Clear localStorage
           localStorage.removeItem('authToken');
           localStorage.removeItem('firebaseToken');
-          
+
           set({
             user: null,
             token: null,
@@ -143,7 +153,7 @@ export const useAuthStore = create<AuthState>()(
 
       loadUser: async () => {
         const token = localStorage.getItem('authToken');
-        
+
         if (!token) {
           set({ isLoading: false });
           return;
@@ -151,7 +161,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           set({ isLoading: true });
-          
+
           const response = await authAPI.getCurrentUser();
           const user = response.data;
 
@@ -174,7 +184,7 @@ export const useAuthStore = create<AuthState>()(
                   'userProgress',
                   'dailyStats'
                 ];
-                return userSpecificQueries.some(key => 
+                return userSpecificQueries.some(key =>
                   query.queryKey.includes(key)
                 );
               }
@@ -182,13 +192,13 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (error: any) {
           console.error('Load user error:', error);
-          
+
           // If token is invalid, clear it
           if (error.response?.status === 401) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('firebaseToken');
           }
-          
+
           set({
             user: null,
             token: null,
@@ -201,7 +211,7 @@ export const useAuthStore = create<AuthState>()(
       updateProfile: async (userData) => {
         try {
           set({ isLoading: true });
-          
+
           const response = await authAPI.updateProfile(userData);
           const updatedUser = response.data;
 
@@ -219,10 +229,10 @@ export const useAuthStore = create<AuthState>()(
 
           toast.success('Cập nhật thông tin thành công!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.error || 
-                              error.response?.data?.detail || 
-                              'Cập nhật thất bại';
-          
+          const errorMessage = error.response?.data?.error ||
+            error.response?.data?.detail ||
+            'Cập nhật thất bại';
+
           set({ isLoading: false });
           toast.error(errorMessage);
           throw error;

@@ -21,14 +21,12 @@ class BaseSerializer(serializers.ModelSerializer):
 
 class UserSerializer(BaseSerializer):
     password = serializers.CharField(write_only=True, required=False)
-    avatar = serializers.SerializerMethodField()
-
-    def get_avatar(self, obj):
-        return obj.avatar.url if obj.avatar else ''
+    avatar = serializers.ImageField(required=False, allow_null=True)  # Thay đổi từ SerializerMethodField
 
     def create(self, validated_data):
-        # Lấy password trước khi tạo user
+        # Lấy password và avatar trước khi tạo user
         password = validated_data.pop('password', None)
+        avatar = validated_data.pop('avatar', None)
 
         # Tạo user
         user = User(**validated_data)
@@ -37,12 +35,17 @@ class UserSerializer(BaseSerializer):
         if password:
             user.set_password(password)
 
+        # Set avatar nếu có
+        if avatar:
+            user.avatar = avatar
+
         user.save()
         return user
 
     def update(self, instance, validated_data):
         # Xử lý password khi update
         password = validated_data.pop('password', None)
+        avatar = validated_data.pop('avatar', None)
 
         # Update các field khác
         for attr, value in validated_data.items():
@@ -52,16 +55,30 @@ class UserSerializer(BaseSerializer):
         if password:
             instance.set_password(password)
 
+        # Update avatar nếu có
+        if avatar:
+            instance.avatar = avatar
+
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Đảm bảo avatar URL được trả về đúng
+        if instance.avatar:
+            data['avatar'] = instance.avatar.url
+        else:
+            data['avatar'] = None
+        return data
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name',
                   'display_name', 'avatar', 'total_points', 'date_joined', 'password']
         extra_kwargs = {
-            'password': {'write_only': True, 'required': True},  # Bắt buộc khi tạo mới
-            'email': {'required': False}
+            'password': {'write_only': True, 'required': True},
+            'email': {'required': False},
+            'avatar': {'required': False}
         }
 
 

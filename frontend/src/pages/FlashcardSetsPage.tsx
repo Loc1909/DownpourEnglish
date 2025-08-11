@@ -1,6 +1,6 @@
 // src/pages/FlashcardSetsPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,52 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+
+// Component tách biệt cho search input
+const SearchInput = React.memo(({ value, onChange, placeholder }: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync với external value
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // Handle change với debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localValue !== value) {
+        onChange(localValue);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [localValue, onChange, value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  return (
+    <div className="relative">
+      <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 transform -translate-y-1/2" />
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder={placeholder}
+        value={localValue}
+        onChange={handleChange}
+        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+    </div>
+  );
+});
+
+SearchInput.displayName = 'SearchInput';
 
 const FlashcardSetsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -58,6 +104,11 @@ const FlashcardSetsPage: React.FC = () => {
 
   const flashcardSets = flashcardSetsData?.data.results || [];
   const topics = topicsData?.data.results || [];
+
+  // Memoized callback để tránh re-render
+  const handleSearchChange = useCallback((newSearchQuery: string) => {
+    setSearchQuery(newSearchQuery);
+  }, []);
 
   const handleSaveSet = async (setId: number) => {
     try {
@@ -144,16 +195,11 @@ const FlashcardSetsPage: React.FC = () => {
       {/* Search and Filters */}
       <Card className="space-y-4">
         {/* Search bar */}
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 transform -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm bộ flashcard..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={handleSearchChange}
+          placeholder="Tìm kiếm bộ flashcard..."
+        />
 
         {/* Filter toggle */}
         <div className="flex items-center justify-between">

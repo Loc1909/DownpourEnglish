@@ -1,4 +1,4 @@
-from rest_framework import viewsets, generics, status, permissions, filters
+from rest_framework import viewsets, generics, status, permissions, filters, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q, Count, Avg, F, Sum, Max
@@ -244,11 +244,43 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
     serializer_class = serializers.UserSerializer
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_permissions(self):
         if self.action in ['current_user', 'study_summary', 'saved_sets']:
             return [permissions.IsAuthenticated()]
+        elif self.action == 'create':
+            return [permissions.AllowAny()]  # Cho phép đăng ký không cần auth
         return [permissions.AllowAny()]
+
+    def create(self, request):
+        """Đăng ký tài khoản mới với hỗ trợ upload avatar"""
+
+        # Debug: In ra để kiểm tra dữ liệu nhận được
+        print("Content-Type:", request.content_type)
+        print("Data:", request.data)
+        print("Files:", request.FILES)
+
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                from rest_framework.authtoken.models import Token
+                token, created = Token.objects.get_or_create(user=user)
+
+                return Response({
+                    'message': 'Đăng ký thành công',
+                    'token': token.key,
+                    'user': serializers.UserSerializer(user).data
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print(f"Error creating user: {str(e)}")
+                return Response({
+                    'error': f'Lỗi tạo tài khoản: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        print("Serializer errors:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False, permission_classes=[permissions.AllowAny])
     def login(self, request):
@@ -279,20 +311,51 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['post'], detail=False, permission_classes=[permissions.AllowAny])
     def register(self, request):
-        """Đăng ký tài khoản mới"""
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            from rest_framework.authtoken.models import Token
-            token, created = Token.objects.get_or_create(user=user)
+        """Đăng ký tài khoản mới với hỗ trợ upload avatar - DEPRECATED: Sử dụng POST /users/ thay thế"""
+
+        # Redirect to create method
+        return self.create(request)
+
+    @action(methods=['post'], detail=False, permission_classes=[permissions.IsAuthenticated])
+    def upload_avatar(self, request):
+        """Upload avatar cho user hiện tại"""
+        avatar_file = request.FILES.get('avatar')
+
+        if not avatar_file:
+            return Response(
+                {'error': 'Vui lòng chọn file avatar'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file type
+        if not avatar_file.content_type.startswith('image/'):
+            return Response(
+                {'error': 'Chỉ chấp nhận file hình ảnh'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file size (max 5MB)
+        if avatar_file.size > 5 * 1024 * 1024:
+            return Response(
+                {'error': 'File không được vượt quá 5MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Cập nhật avatar cho user
+            user = request.user
+            user.avatar = avatar_file
+            user.save()
 
             return Response({
-                'message': 'Đăng ký thành công',
-                'token': token.key,
-                'user': serializers.UserSerializer(user).data
-            }, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                'message': 'Upload avatar thành công',
+                'avatar_url': user.avatar.url if user.avatar else None
+            })
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi upload avatar: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(methods=['post'], detail=False, permission_classes=[permissions.IsAuthenticated])
     def logout(self, request):

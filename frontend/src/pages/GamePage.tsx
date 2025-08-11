@@ -18,7 +18,7 @@ import { FlashcardSet, Flashcard } from '../types';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import Badge from '../components/common/Badge';
+//import Badge from '../components/common/Badge';
 import toast from 'react-hot-toast';
 
 interface GameState {

@@ -22,19 +22,30 @@ import EmptyState from '../components/common/EmptyState';
 const AchievementsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Fetch all achievements
-  const { data: allAchievements = [], isLoading: loadingAll } = useQuery({
+  // Fetch all achievements - returns PaginatedResponse<Achievement>
+  const { 
+    data: allAchievementsResponse, 
+    isLoading: loadingAll 
+  } = useQuery({
     queryKey: ['achievements'],
     queryFn: () => achievementsAPI.getAll().then(res => res.data)
   });
 
-  // Fetch user achievements
-  const { data: userAchievements = [], isLoading: loadingUser } = useQuery({
+  // Fetch user achievements - returns UserAchievement[]
+  const { 
+    data: userAchievementsResponse, 
+    isLoading: loadingUser 
+  } = useQuery({
     queryKey: ['user-achievements'],
     queryFn: () => achievementsAPI.getUserAchievements().then(res => res.data)
   });
 
   const isLoading = loadingAll || loadingUser;
+
+  // Extract data correctly based on API response format
+  // Backend trả về array chứ không phải paginated response
+  const allAchievements = allAchievementsResponse || [];
+  const userAchievements = userAchievementsResponse || [];
 
   // Create map of earned achievements
   const earnedMap = React.useMemo(() => {
@@ -131,7 +142,7 @@ const AchievementsPage: React.FC = () => {
         <Card className="text-center">
           <div className="text-3xl mb-2">📈</div>
           <h3 className="text-2xl font-bold text-gray-900">
-            {Math.round((userAchievements.length / allAchievements.length) * 100)}%
+            {allAchievements.length > 0 ? Math.round((userAchievements.length / allAchievements.length) * 100) : 0}%
           </h3>
           <p className="text-gray-600">Hoàn thành</p>
         </Card>

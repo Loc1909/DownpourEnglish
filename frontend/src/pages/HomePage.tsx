@@ -19,27 +19,27 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 const HomePage: React.FC = () => {
   const { user } = useAuthStore();
 
-  // Fetch user study summary
+  // Fetch user study summary - returns object directly
   const { data: studySummary, isLoading: summaryLoading } = useQuery({
     queryKey: ['studySummary'],
-    queryFn: () => userAPI.getStudySummary(),
+    queryFn: () => userAPI.getStudySummary().then(res => res.data),
   });
 
-  // Fetch recent flashcard sets
-  const { data: recentSets, isLoading: setsLoading } = useQuery({
+  // Fetch recent flashcard sets - returns paginated response
+  const { data: recentSetsResponse, isLoading: setsLoading } = useQuery({
     queryKey: ['recentFlashcardSets'],
-    queryFn: () => flashcardSetsAPI.getAll({ ordering: '-created_at' }),
+    queryFn: () => flashcardSetsAPI.getAll({ ordering: '-created_at', page_size: 6 }),
   });
 
-  // Fetch user achievements
+  // Fetch user achievements - returns array directly
   const { data: userAchievements, isLoading: achievementsLoading } = useQuery({
     queryKey: ['userAchievements'],
-    queryFn: () => achievementsAPI.getUserAchievements(),
+    queryFn: () => achievementsAPI.getUserAchievements().then(res => res.data),
   });
 
-  const summary = studySummary?.data;
-  const sets = recentSets?.data.results?.slice(0, 6) || [];
-  const achievements = userAchievements?.data?.slice(0, 3) || [];
+  const summary = studySummary;
+  const sets = recentSetsResponse?.data.results || [];
+  const achievements = (userAchievements || []).slice(0, 3); // Take first 3
 
   const quickActions = [
     {

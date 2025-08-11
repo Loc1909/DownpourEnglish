@@ -7,7 +7,7 @@ import {
   HomeIcon,
   BookOpenIcon,
   AcademicCapIcon,
-  UserIcon,
+  //UserIcon,
   TrophyIcon,
   ChartBarIcon,
   PuzzlePieceIcon,

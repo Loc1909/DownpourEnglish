@@ -4,11 +4,19 @@ import axios, { AxiosResponse } from 'axios';
 import { 
   User, Topic, FlashcardSet, Flashcard, GameSession, 
   Achievement, UserAchievement, DailyStats, StudySummary,
-  AuthResponse, PaginatedResponse, LeaderboardEntry, UserProgress,
-  SavedFlashcardSet
+  AuthResponse, PaginatedResponse, LeaderboardEntry, UserProgress
 } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+
+// Add SavedFlashcardSet interface
+export interface SavedFlashcardSet {
+  id: number;
+  flashcard_set: FlashcardSet;
+  saved_at: string;
+  is_favorite: boolean;
+  rating: number | null;
+}
 
 // Create axios instance
 const api = axios.create({
@@ -56,15 +64,30 @@ export const authAPI = {
   login: (username: string, password: string): Promise<AxiosResponse<AuthResponse>> =>
     api.post('/users/login/', { username, password }),
   
-  register: (userData: {
+  register: (userData: FormData | {
     username: string;
     password: string;
     email: string;
     first_name?: string;
     last_name?: string;
     display_name?: string;
-  }): Promise<AxiosResponse<AuthResponse>> =>
-    api.post('/users/register/', userData),
+    avatar?: string;
+  }): Promise<AxiosResponse<AuthResponse>> => {
+    // Nếu userData là FormData, gửi với multipart/form-data
+    if (userData instanceof FormData) {
+      console.log('Sending FormData to /users/ endpoint');
+      return api.post('/users/', userData, {
+        headers: {
+          // Đặt Content-Type thành multipart/form-data
+          // Axios sẽ tự động set boundary
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    }
+    // Nếu không, gửi với JSON như bình thường
+    console.log('Sending JSON to /users/ endpoint');
+    return api.post('/users/', userData);
+  },
   
   logout: (): Promise<AxiosResponse<{ message: string }>> =>
     api.post('/users/logout/'),
@@ -76,17 +99,20 @@ export const authAPI = {
     api.patch('/users/current_user/', userData),
 };
 
-// Topics API
+// Topics API - Uses pagination
 export const topicsAPI = {
-  // Sửa lại return type để match với backend pagination
-  getAll: (): Promise<AxiosResponse<PaginatedResponse<Topic>>> =>
-    api.get('/topics/'),
+  getAll: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<AxiosResponse<PaginatedResponse<Topic>>> =>
+    api.get('/topics/', { params }),
   
+  // This returns array, not paginated (custom action)
   getFlashcardSets: (topicId: number): Promise<AxiosResponse<FlashcardSet[]>> =>
     api.get(`/topics/${topicId}/flashcard-sets/`),
 };
 
-// Flashcard Sets API
+// Flashcard Sets API - Uses pagination for list
 export const flashcardSetsAPI = {
   getAll: (params?: {
     q?: string;
@@ -94,6 +120,8 @@ export const flashcardSetsAPI = {
     difficulty?: string;
     creator_id?: number;
     ordering?: string;
+    page?: number;
+    page_size?: number;
   }): Promise<AxiosResponse<PaginatedResponse<FlashcardSet>>> =>
     api.get('/flashcard-sets/', { params }),
   
@@ -122,6 +150,7 @@ export const flashcardSetsAPI = {
   }>> =>
     api.post(`/flashcard-sets/${id}/rate/`, { rating }),
   
+  // This returns array, not paginated (custom action)
   getFlashcards: (id: number): Promise<AxiosResponse<Flashcard[]>> =>
     api.get(`/flashcard-sets/${id}/flashcards/`),
 };
@@ -156,19 +185,23 @@ export const flashcardsAPI = {
 
 // User API
 export const userAPI = {
+  // This returns object, not paginated (custom action)
   getStudySummary: (): Promise<AxiosResponse<StudySummary>> =>
     api.get('/users/study_summary/'),
   
+  // This returns array, not paginated (custom action)
   getSavedSets: (): Promise<AxiosResponse<SavedFlashcardSet[]>> =>
     api.get('/users/saved_sets/'),
 };
 
-// Progress API
+// Progress API - Uses pagination
 export const progressAPI = {
   getAll: (params?: {
     is_difficult?: boolean;
     is_learned?: boolean;
-  }): Promise<AxiosResponse<UserProgress[]>> =>
+    page?: number;
+    page_size?: number;
+  }): Promise<AxiosResponse<PaginatedResponse<UserProgress>>> =>
     api.get('/progress/', { params }),
   
   markDifficult: (id: number): Promise<AxiosResponse<{
@@ -178,7 +211,7 @@ export const progressAPI = {
     api.post(`/progress/${id}/mark_difficult/`),
 };
 
-// Game Sessions API
+// Game Sessions API - Uses pagination for list
 export const gameAPI = {
   createSession: (data: {
     game_type: string;
@@ -189,29 +222,41 @@ export const gameAPI = {
   }): Promise<AxiosResponse<GameSession>> =>
     api.post('/game-sessions/', data),
   
-  getSessions: (): Promise<AxiosResponse<GameSession[]>> =>
-    api.get('/game-sessions/'),
+  getSessions: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<AxiosResponse<PaginatedResponse<GameSession>>> =>
+    api.get('/game-sessions/', { params }),
   
+  // This returns array, not paginated (custom action)
   getLeaderboard: (gameType?: string): Promise<AxiosResponse<LeaderboardEntry[]>> =>
     api.get('/game-sessions/leaderboard/', { params: { game_type: gameType } }),
 };
 
-// Achievements API
+// Achievements API - Backend trả về array, không phải paginated
 export const achievementsAPI = {
-  getAll: (): Promise<AxiosResponse<Achievement[]>> =>
-    api.get('/achievements/'),
+  getAll: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<AxiosResponse<Achievement[]>> =>  // Thay đổi từ PaginatedResponse<Achievement> thành Achievement[]
+    api.get('/achievements/', { params }),
   
+  // This returns array, not paginated (custom action)
   getUserAchievements: (): Promise<AxiosResponse<UserAchievement[]>> =>
     api.get('/achievements/my_achievements/'),
 };
 
-// Daily Stats API
+// Daily Stats API - Uses pagination
 export const statsAPI = {
-  getDailyStats: (days: number = 7): Promise<AxiosResponse<DailyStats[]>> =>
-    api.get('/daily-stats/', { params: { days } }),
+  getDailyStats: (params?: {
+    days?: number;
+    page?: number;
+    page_size?: number;
+  }): Promise<AxiosResponse<PaginatedResponse<DailyStats>>> =>
+    api.get('/daily-stats/', { params }),
 };
 
-// Feedback API
+// Feedback API - Uses pagination
 export const feedbackAPI = {
   create: (data: {
     flashcard: number;
@@ -220,8 +265,11 @@ export const feedbackAPI = {
   }): Promise<AxiosResponse<any>> =>
     api.post('/feedback/', data),
   
-  getAll: (): Promise<AxiosResponse<any[]>> =>
-    api.get('/feedback/'),
+  getAll: (params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<AxiosResponse<PaginatedResponse<any>>> =>
+    api.get('/feedback/', { params }),
 };
 
 export default api;

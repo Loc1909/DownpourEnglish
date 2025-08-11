@@ -24,11 +24,14 @@ import Button from '../components/common/Button';
 const StatsPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<number>(7);
 
-  // Fetch daily stats
-  const { data: dailyStats = [], isLoading: loadingStats } = useQuery({
+  // Fetch daily stats - Fixed to handle paginated response
+  const { data: dailyStatsResponse, isLoading: loadingStats } = useQuery({
     queryKey: ['daily-stats', selectedPeriod],
-    queryFn: () => statsAPI.getDailyStats(selectedPeriod).then(res => res.data)
+    queryFn: () => statsAPI.getDailyStats({ days: selectedPeriod }).then(res => res.data)
   });
+
+  // Extract results from paginated response
+  const dailyStats = dailyStatsResponse?.results || [];
 
   // Fetch study summary
   const { data: studySummary, isLoading: loadingSummary } = useQuery({
