@@ -1,6 +1,6 @@
 // src/pages/FlashcardSetsPage.tsx
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,52 +25,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
-
-// Component tách biệt cho search input
-const SearchInput = React.memo(({ value, onChange, placeholder }: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) => {
-  const [localValue, setLocalValue] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Sync với external value
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  // Handle change với debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localValue !== value) {
-        onChange(localValue);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [localValue, onChange, value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(e.target.value);
-  };
-
-  return (
-    <div className="relative">
-      <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 transform -translate-y-1/2" />
-      <input
-        ref={inputRef}
-        type="text"
-        placeholder={placeholder}
-        value={localValue}
-        onChange={handleChange}
-        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
-    </div>
-  );
-});
-
-SearchInput.displayName = 'SearchInput';
+import useDebounce from '../hooks/useDebounce';
 
 const FlashcardSetsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -79,21 +34,34 @@ const FlashcardSetsPage: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
   const [sortBy, setSortBy] = useState('created_at');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Ref để giữ focus cho input
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch flashcard sets
+  // Debounce search query với delay 300ms
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Fetch flashcard sets - sử dụng debouncedSearchQuery thay vì searchQuery
   const {
     data: flashcardSetsData,
     isLoading: setsLoading,
+    isFetching: setsFetching,
     refetch: refetchSets,
   } = useQuery({
-    queryKey: ['flashcard-sets', searchQuery, selectedTopic, selectedDifficulty, sortBy],
+    queryKey: ['flashcard-sets', debouncedSearchQuery, selectedTopic, selectedDifficulty, sortBy],
     queryFn: () =>
       flashcardSetsAPI.getAll({
-        q: searchQuery || undefined,
+        q: debouncedSearchQuery || undefined,
         topic_id: selectedTopic || undefined,
         difficulty: selectedDifficulty || undefined,
         ordering: sortBy.startsWith('-') ? sortBy : `-${sortBy}`,
       }),
+    // Giữ dữ liệu cũ khi fetch dữ liệu mới
+    placeholderData: (prev) => prev,
+    // Cache dữ liệu trong 5 phút
+    staleTime: 5 * 60 * 1000,
+    // Refetch khi window focus (tùy chọn)
+    refetchOnWindowFocus: false,
   });
 
   // Fetch topics for filter
@@ -105,10 +73,8 @@ const FlashcardSetsPage: React.FC = () => {
   const flashcardSets = flashcardSetsData?.data.results || [];
   const topics = topicsData?.data.results || [];
 
-  // Memoized callback để tránh re-render
-  const handleSearchChange = useCallback((newSearchQuery: string) => {
-    setSearchQuery(newSearchQuery);
-  }, []);
+  // Hiển thị loading indicator nhỏ khi đang fetch (không phải loading lần đầu)
+  const isSearching = setsFetching && !setsLoading;
 
   const handleSaveSet = async (setId: number) => {
     try {
@@ -161,6 +127,16 @@ const FlashcardSetsPage: React.FC = () => {
     setSelectedTopic(null);
     setSelectedDifficulty('');
     setSortBy('created_at');
+    // Focus lại vào input sau khi clear
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 0);
+  };
+
+  // Xử lý khi nhập vào ô tìm kiếm
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Không cần làm gì thêm, debounce sẽ tự động xử lý
   };
 
   if (setsLoading) {
@@ -195,11 +171,24 @@ const FlashcardSetsPage: React.FC = () => {
       {/* Search and Filters */}
       <Card className="space-y-4">
         {/* Search bar */}
-        <SearchInput
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Tìm kiếm bộ flashcard..."
-        />
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 transform -translate-y-1/2" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Tìm kiếm bộ flashcard..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            autoFocus
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {/* Loading indicator nhỏ khi đang search */}
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+            </div>
+          )}
+        </div>
 
         {/* Filter toggle */}
         <div className="flex items-center justify-between">
@@ -291,112 +280,124 @@ const FlashcardSetsPage: React.FC = () => {
       </Card>
 
       {/* Results */}
-      {flashcardSets.length === 0 ? (
-        <EmptyState
-          icon={<BookmarkIcon className="h-12 w-12" />}
-          title="Không tìm thấy bộ flashcard nào"
-          description="Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc của bạn"
-          action={
-            <Button onClick={clearFilters} variant="outline">
-              Xóa bộ lọc
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {flashcardSets.map((set: FlashcardSet) => (
-            <motion.div
-              key={set.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card hover className="h-full flex flex-col">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <Link
-                      to={`/flashcard-sets/${set.id}`}
-                      className="block text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                    >
-                      {set.title}
-                    </Link>
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                      {set.description}
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={() => handleSaveSet(set.id)}
-                    className="ml-2 p-1 text-gray-400 hover:text-blue-500 transition-colors"
-                  >
-                    {set.is_saved ? (
-                      <BookmarkSolidIcon className="h-5 w-5 text-blue-500" />
-                    ) : (
-                      <BookmarkIcon className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
+      <div className="relative">
+        {/* Overlay loading khi đang search (tùy chọn) */}
+        {isSearching && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="bg-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              <span className="text-sm text-gray-600">Đang tìm kiếm...</span>
+            </div>
+          </div>
+        )}
 
-                {/* Topic and Difficulty */}
-                <div className="flex items-center space-x-2 mb-3">
-                  <Badge variant="secondary" size="sm">
-                    {set.topic.name}
-                  </Badge>
-                  <Badge variant={getDifficultyColor(set.difficulty)} size="sm">
-                    {getDifficultyText(set.difficulty)}
-                  </Badge>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
-                  <div className="flex items-center">
-                    <BookmarkIcon className="h-4 w-4 mr-1" />
-                    {set.total_cards} thẻ
-                  </div>
-                  <div className="flex items-center">
-                    <UsersIcon className="h-4 w-4 mr-1" />
-                    {set.total_saves} lưu
-                  </div>
-                  <div className="flex items-center">
-                    <StarIcon className="h-4 w-4 mr-1" />
-                    {set.average_rating.toFixed(1)}
-                  </div>
-                </div>
-
-                {/* Creator */}
-                <div className="flex items-center text-sm text-gray-500 mb-4">
-                  <span>Tạo bởi: {set.creator.display_name || set.creator.username}</span>
-                </div>
-
-                {/* Actions */}
-                <div className="mt-auto flex items-center justify-between">
-                  <Link to={`/flashcard-sets/${set.id}`}>
-                    <Button size="sm">Xem chi tiết</Button>
-                  </Link>
-                  
-                  {/* Rating */}
-                  <div className="flex items-center space-x-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        onClick={() => handleRateSet(set.id, star)}
-                        className="text-gray-300 hover:text-yellow-400 transition-colors"
+        {flashcardSets.length === 0 ? (
+          <EmptyState
+            icon={<BookmarkIcon className="h-12 w-12" />}
+            title="Không tìm thấy bộ flashcard nào"
+            description="Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc của bạn"
+            action={
+              <Button onClick={clearFilters} variant="outline">
+                Xóa bộ lọc
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {flashcardSets.map((set: FlashcardSet) => (
+              <motion.div
+                key={set.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card hover className="h-full flex flex-col">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <Link
+                        to={`/flashcard-sets/${set.id}`}
+                        className="block text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
                       >
-                        {(set.user_rating && star <= set.user_rating) || star <= Math.round(set.average_rating) ? (
-                          <StarSolidIcon className="h-4 w-4 text-yellow-400" />
-                        ) : (
-                          <StarIcon className="h-4 w-4" />
-                        )}
-                      </button>
-                    ))}
+                        {set.title}
+                      </Link>
+                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                        {set.description}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleSaveSet(set.id)}
+                      className="ml-2 p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                    >
+                      {set.is_saved ? (
+                        <BookmarkSolidIcon className="h-5 w-5 text-blue-500" />
+                      ) : (
+                        <BookmarkIcon className="h-5 w-5" />
+                      )}
+                    </button>
                   </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
+
+                  {/* Topic and Difficulty */}
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Badge variant="secondary" size="sm">
+                      {set.topic.name}
+                    </Badge>
+                    <Badge variant={getDifficultyColor(set.difficulty)} size="sm">
+                      {getDifficultyText(set.difficulty)}
+                    </Badge>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
+                    <div className="flex items-center">
+                      <BookmarkIcon className="h-4 w-4 mr-1" />
+                      {set.total_cards} thẻ
+                    </div>
+                    <div className="flex items-center">
+                      <UsersIcon className="h-4 w-4 mr-1" />
+                      {set.total_saves} lưu
+                    </div>
+                    <div className="flex items-center">
+                      <StarIcon className="h-4 w-4 mr-1" />
+                      {set.average_rating.toFixed(1)}
+                    </div>
+                  </div>
+
+                  {/* Creator */}
+                  <div className="flex items-center text-sm text-gray-500 mb-4">
+                    <span>Tạo bởi: {set.creator.display_name || set.creator.username}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-auto flex items-center justify-between">
+                    <Link to={`/flashcard-sets/${set.id}`}>
+                      <Button size="sm">Xem chi tiết</Button>
+                    </Link>
+                    
+                    {/* Rating */}
+                    <div className="flex items-center space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => handleRateSet(set.id, star)}
+                          className="text-gray-300 hover:text-yellow-400 transition-colors"
+                        >
+                          {(set.user_rating && star <= set.user_rating) || star <= Math.round(set.average_rating) ? (
+                            <StarSolidIcon className="h-4 w-4 text-yellow-400" />
+                          ) : (
+                            <StarIcon className="h-4 w-4" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
