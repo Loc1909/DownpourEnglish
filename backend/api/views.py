@@ -165,6 +165,57 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         )
         return Response(serializer.data)
 
+    @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
+    def favorite(self, request, pk):
+        """Thêm/bỏ yêu thích bộ flashcard"""
+        flashcard_set = self.get_object()
+
+        try:
+            # Tìm xem user đã lưu bộ flashcard này chưa
+            saved_set = SavedFlashcardSet.objects.get(
+                user=request.user,
+                flashcard_set=flashcard_set
+            )
+
+            # Toggle trạng thái yêu thích
+            saved_set.is_favorite = not saved_set.is_favorite
+            saved_set.save()
+
+            message = "Đã thêm vào yêu thích" if saved_set.is_favorite else "Đã bỏ khỏi yêu thích"
+            is_favorite = saved_set.is_favorite
+
+        except SavedFlashcardSet.DoesNotExist:
+            # Nếu chưa lưu -> tạo mới và đánh dấu yêu thích
+            SavedFlashcardSet.objects.create(
+                user=request.user,
+                flashcard_set=flashcard_set,
+                is_favorite=True
+            )
+            message = "Đã lưu và thêm vào yêu thích"
+            is_favorite = True
+
+            # Cập nhật lại total_saves
+            flashcard_set.update_total_saves()
+
+        return Response({
+            'message': message,
+            'is_favorite': is_favorite,
+            'total_saves': flashcard_set.total_saves
+        })
+
+    @action(methods=['get'], detail=False, permission_classes=[permissions.IsAuthenticated])
+    def favorites(self, request):
+        """Lấy danh sách bộ flashcard yêu thích"""
+        favorites = SavedFlashcardSet.objects.filter(
+            user=request.user,
+            is_favorite=True
+        ).select_related('flashcard_set__creator', 'flashcard_set__topic')
+
+        serializer = serializers.SavedFlashcardSetSerializer(
+            favorites, many=True, context={'request': request}
+        )
+        return Response(serializer.data)
+
 
 class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.UpdateAPIView, generics.DestroyAPIView):
     queryset = Flashcard.objects.all()

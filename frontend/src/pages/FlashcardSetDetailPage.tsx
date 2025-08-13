@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   ArrowLeftIcon,
@@ -15,7 +15,6 @@ import {
   ChartBarIcon,
   EyeIcon,
   PencilIcon,
-  //TrashIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 
@@ -33,6 +32,7 @@ const FlashcardSetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [showAnswers, setShowAnswers] = useState<{ [key: number]: boolean }>({});
 
   // Fetch flashcard set details
@@ -41,9 +41,11 @@ const FlashcardSetDetailPage: React.FC = () => {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['flashcard-set', id],
+    queryKey: ['flashcard-set', Number(id)],
     queryFn: () => flashcardSetsAPI.getById(Number(id!)),
     enabled: !!id,
+    // Giảm stale time để đảm bảo dữ liệu được refresh
+    staleTime: 2 * 60 * 1000, // 2 phút
   });
 
   const set = flashcardSet?.data;
@@ -54,7 +56,16 @@ const FlashcardSetDetailPage: React.FC = () => {
     try {
       const response = await flashcardSetsAPI.save(set.id);
       toast.success(response.data.message);
-      refetch();
+      
+      // Invalidate cả detail và list queries để đồng bộ dữ liệu
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['flashcard-set', set.id]
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['flashcard-sets']
+        })
+      ]);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Có lỗi xảy ra');
     }
@@ -66,7 +77,16 @@ const FlashcardSetDetailPage: React.FC = () => {
     try {
       const response = await flashcardSetsAPI.rate(set.id, rating);
       toast.success(response.data.message);
-      refetch();
+      
+      // Invalidate cả detail và list queries để đồng bộ dữ liệu
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['flashcard-set', set.id]
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['flashcard-sets']
+        })
+      ]);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Có lỗi xảy ra');
     }

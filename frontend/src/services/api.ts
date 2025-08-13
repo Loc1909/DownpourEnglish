@@ -153,6 +153,18 @@ export const flashcardSetsAPI = {
   // This returns array, not paginated (custom action)
   getFlashcards: (id: number): Promise<AxiosResponse<Flashcard[]>> =>
     api.get(`/flashcard-sets/${id}/flashcards/`),
+
+  // Thêm method favorite
+  favorite: (id: number): Promise<AxiosResponse<{
+    message: string;
+    is_favorite: boolean;
+    total_saves: number;
+  }>> =>
+    api.post(`/flashcard-sets/${id}/favorite/`),
+
+  // Lấy danh sách yêu thích  
+  getFavorites: (): Promise<AxiosResponse<SavedFlashcardSet[]>> =>
+    api.get('/flashcard-sets/favorites/'),
 };
 
 // Flashcards API

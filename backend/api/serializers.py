@@ -121,6 +121,7 @@ class FlashcardSetSerializer(BaseSerializer):
     creator = UserSerializer(read_only=True)
     topic = TopicSerializer(read_only=True)
     is_saved = serializers.SerializerMethodField()
+    is_favorite = serializers.SerializerMethodField()  # Thêm field này
     user_rating = serializers.SerializerMethodField()
 
     def get_is_saved(self, obj):
@@ -129,6 +130,19 @@ class FlashcardSetSerializer(BaseSerializer):
             return SavedFlashcardSet.objects.filter(
                 user=request.user, flashcard_set=obj
             ).exists()
+        return False
+
+    def get_is_favorite(self, obj):
+        """Kiểm tra xem user có yêu thích bộ flashcard này không"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            try:
+                saved = SavedFlashcardSet.objects.get(
+                    user=request.user, flashcard_set=obj
+                )
+                return saved.is_favorite
+            except SavedFlashcardSet.DoesNotExist:
+                return False
         return False
 
     def get_user_rating(self, obj):
@@ -147,7 +161,7 @@ class FlashcardSetSerializer(BaseSerializer):
         model = FlashcardSet
         fields = ['id', 'title', 'description', 'topic', 'creator',
                   'is_public', 'difficulty', 'total_cards', 'total_saves',
-                  'average_rating', 'created_at', 'is_saved', 'user_rating']
+                  'average_rating', 'created_at', 'is_saved', 'is_favorite', 'user_rating']
 
 
 class FlashcardSetDetailSerializer(FlashcardSetSerializer):

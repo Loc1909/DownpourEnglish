@@ -149,7 +149,7 @@ const GamePage: React.FC = () => {
     if (!selectedAnswer.trim()) return;
 
     const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
-    const isCorrect = gameState.type === 'word_match' 
+    const isCorrect = gameState.type === 'word_match'
       ? selectedAnswer.toLowerCase().trim() === currentQuestion.vietnamese.toLowerCase().trim()
       : selectedAnswer.toLowerCase().trim() === currentQuestion.english.toLowerCase().trim();
 
@@ -171,7 +171,7 @@ const GamePage: React.FC = () => {
     setTimeout(() => {
       setShowAnswer(false);
       setSelectedAnswer('');
-      
+
       if (gameState.currentQuestionIndex < gameState.questions.length - 1) {
         setGameState(prev => ({
           ...prev,
@@ -185,7 +185,7 @@ const GamePage: React.FC = () => {
 
   const finishGame = async () => {
     const timeSpent = Math.floor((Date.now() - gameState.startTime) / 1000);
-    
+
     setGameState(prev => ({
       ...prev,
       gameFinished: true
@@ -227,16 +227,26 @@ const GamePage: React.FC = () => {
     const availableOptions = allQuestions
       .map(q => isVietnamese ? q.vietnamese : q.english)
       .filter(option => option !== correctAnswer);
-    
+
     // Add 3 random wrong options
     for (let i = 0; i < 3 && availableOptions.length > 0; i++) {
       const randomIndex = Math.floor(Math.random() * availableOptions.length);
       options.push(availableOptions[randomIndex]);
       availableOptions.splice(randomIndex, 1);
     }
-    
+
     return options.sort(() => Math.random() - 0.5);
   };
+
+  // Calculate current question data before using in useMemo
+  const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
+  const isWordMatch = gameState.type === 'word_match';
+  const correctAnswer = currentQuestion ? (isWordMatch ? currentQuestion.vietnamese : currentQuestion.english) : '';
+
+  const options = React.useMemo(() => {
+    if (gameState.type !== 'word_match' || !currentQuestion) return [];
+    return generateOptions(correctAnswer, gameState.questions, true);
+  }, [gameState.type, gameState.currentQuestionIndex, gameState.questions, correctAnswer]);
 
   if (setsLoading) {
     return (
@@ -271,7 +281,7 @@ const GamePage: React.FC = () => {
                   <h3 className="text-xl font-semibold text-gray-900">{game.name}</h3>
                   <p className="text-gray-600 mt-2">{game.description}</p>
                 </div>
-                
+
                 {/* Flashcard Set Selection */}
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -315,7 +325,7 @@ const GamePage: React.FC = () => {
   // Game Finished Screen
   if (gameState.gameFinished) {
     const accuracy = Math.round((gameState.correctAnswers / gameState.questions.length) * 100);
-    
+
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -355,9 +365,8 @@ const GamePage: React.FC = () => {
               {[1, 2, 3, 4, 5].map((star) => (
                 <StarIcon
                   key={star}
-                  className={`w-8 h-8 ${
-                    star <= Math.ceil(accuracy / 20) ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                  }`}
+                  className={`w-8 h-8 ${star <= Math.ceil(accuracy / 20) ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                    }`}
                 />
               ))}
             </div>
@@ -383,16 +392,17 @@ const GamePage: React.FC = () => {
     );
   }
 
-  // Game Playing Screen
-  const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
+  // Game Playing Screen - only show if we have a current question
+  if (!currentQuestion) {
+    return (
+      <div className="flex justify-center items-center min-h-96">
+        <LoadingSpinner size="large" />
+      </div>
+    );
+  }
+
   const progress = ((gameState.currentQuestionIndex + 1) / gameState.questions.length) * 100;
-  const isWordMatch = gameState.type === 'word_match';
   const questionText = isWordMatch ? currentQuestion.english : currentQuestion.vietnamese;
-  const correctAnswer = isWordMatch ? currentQuestion.vietnamese : currentQuestion.english;
-  
-  const options = gameState.type === 'word_match' 
-    ? generateOptions(correctAnswer, gameState.questions, true)
-    : [];
 
   return (
     <motion.div
@@ -465,11 +475,10 @@ const GamePage: React.FC = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedAnswer(option)}
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          selectedAnswer === option
+                        className={`p-4 rounded-lg border-2 transition-all ${selectedAnswer === option
                             ? 'border-blue-500 bg-blue-50 text-blue-700'
                             : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {option}
                       </button>
@@ -508,11 +517,10 @@ const GamePage: React.FC = () => {
                 className="space-y-4"
               >
                 {/* Answer Result */}
-                <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full ${
-                  selectedAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+                <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full ${selectedAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
                     ? 'bg-green-100 text-green-800'
                     : 'bg-red-100 text-red-800'
-                }`}>
+                  }`}>
                   {selectedAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim() ? (
                     <CheckIcon className="w-5 h-5" />
                   ) : (
@@ -546,13 +554,12 @@ const GamePage: React.FC = () => {
         {gameState.questions.map((_, index) => (
           <div
             key={index}
-            className={`w-3 h-3 rounded-full ${
-              index < gameState.currentQuestionIndex
+            className={`w-3 h-3 rounded-full ${index < gameState.currentQuestionIndex
                 ? 'bg-green-500'
                 : index === gameState.currentQuestionIndex
-                ? 'bg-blue-500'
-                : 'bg-gray-300'
-            }`}
+                  ? 'bg-blue-500'
+                  : 'bg-gray-300'
+              }`}
           />
         ))}
       </div>

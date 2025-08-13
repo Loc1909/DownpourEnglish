@@ -18,6 +18,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import TopicsPage from './pages/TopicsPage';
 import FlashcardSetsPage from './pages/FlashcardSetsPage';
 import FlashcardSetDetailPage from './pages/FlashcardSetDetailPage';
+import FavoritesPage from './pages/FavoritesPage';
 import StudyPage from './pages/StudyPage';
 import ProfilePage from './pages/ProfilePage';
 import GamePage from './pages/GamePage';
@@ -75,6 +76,7 @@ function App() {
                       <Route path="/topics" element={<TopicsPage />} />
                       <Route path="/flashcard-sets" element={<FlashcardSetsPage />} />
                       <Route path="/flashcard-sets/:id" element={<FlashcardSetDetailPage />} />
+                      <Route path="/favorites" element={<FavoritesPage />} />
                       <Route path="/study" element={<StudyPage />} />
                       <Route path="/study/:setId" element={<StudyPage />} />
                       <Route path="/profile" element={<ProfilePage />} />

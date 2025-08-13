@@ -42,6 +42,7 @@ export interface FlashcardSet {
   average_rating: number;
   created_at: string;
   is_saved: boolean;
+  is_favorite: boolean;
   user_rating?: number;
   flashcards?: Flashcard[];
 }
