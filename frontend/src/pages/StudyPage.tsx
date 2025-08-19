@@ -1,4 +1,4 @@
-// src/pages/StudyPage.tsx
+// src/pages/StudyPage.tsx - Fixed version
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -7,17 +7,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  // CheckIcon,
-  // XMarkIcon,
   SpeakerWaveIcon,
   EyeIcon,
-  // EyeSlashIcon,
-  // HeartIcon,
   FaceSmileIcon,
   FaceFrownIcon,
+  HeartIcon,
   StarIcon,
+  BookmarkIcon,
 } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import { 
+  BookmarkIcon as BookmarkSolidIcon,
+  HeartIcon as HeartSolidIcon 
+} from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 
 import { flashcardSetsAPI, flashcardsAPI, userAPI } from '../services/api';
@@ -76,18 +77,43 @@ const StudyPage: React.FC = () => {
     },
   });
 
-// Initialize study session
-useEffect(() => {
-  if (setData?.flashcards && setData.flashcards.length > 0) {
-    setSession(prev => ({
-      ...prev,
-      flashcards: setData.flashcards!, // Non-null assertion
-      currentIndex: 0,
-    }));
-    setSelectedSet(setData);
-  }
-}, [setData]);
+  // Save/unsave set mutation
+  const saveMutation = useMutation({
+    mutationFn: (setId: number) => flashcardSetsAPI.save(setId),
+    onSuccess: (data) => {
+      toast.success(data.data.message);
+      queryClient.invalidateQueries({ queryKey: ['saved-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['flashcard-set', setId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Có lỗi xảy ra');
+    },
+  });
 
+  // Favorite/unfavorite set mutation
+  const favoriteMutation = useMutation({
+    mutationFn: (setId: number) => flashcardSetsAPI.favorite(setId),
+    onSuccess: (data) => {
+      toast.success(data.data.message);
+      queryClient.invalidateQueries({ queryKey: ['saved-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['flashcard-set', setId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Có lỗi xảy ra');
+    },
+  });
+
+  // Initialize study session
+  useEffect(() => {
+    if (setData?.flashcards && setData.flashcards.length > 0) {
+      setSession(prev => ({
+        ...prev,
+        flashcards: setData.flashcards!,
+        currentIndex: 0,
+      }));
+      setSelectedSet(setData);
+    }
+  }, [setData]);
 
   // Text-to-speech function
   const speakText = (text: string, lang: string = 'en-US') => {
@@ -97,6 +123,16 @@ useEffect(() => {
       utterance.rate = 0.8;
       speechSynthesis.speak(utterance);
     }
+  };
+
+  // Handle save/unsave
+  const handleSaveSet = (setId: number) => {
+    saveMutation.mutate(setId);
+  };
+
+  // Handle favorite/unfavorite
+  const handleFavoriteSet = (setId: number) => {
+    favoriteMutation.mutate(setId);
   };
 
   const currentCard = session.flashcards[session.currentIndex];
@@ -175,7 +211,7 @@ useEffect(() => {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Học tập</h1>
-          <p className="text-gray-600">Chọn bộ flashcard để bắt đầu học</p>
+          <p className="text-gray-600">Chọn bộ flashcard đã lưu để bắt đầu học</p>
         </motion.div>
 
         {loadingSets ? (
@@ -184,7 +220,7 @@ useEffect(() => {
           </div>
         ) : savedSets.length === 0 ? (
           <EmptyState
-            title="Chưa có bộ flashcard nào"
+            title="Chưa có bộ flashcard nào đã lưu"
             description="Hãy lưu một số bộ flashcard để bắt đầu học tập"
             action={
               <Button onClick={() => navigate('/flashcard-sets')}>
@@ -194,13 +230,14 @@ useEffect(() => {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {savedSets.map(({ flashcard_set }) => (
+            {savedSets.map(({ flashcard_set, is_favorite, saved_at }) => (
               <Card
                 key={flashcard_set.id}
                 hover
                 onClick={() => handleSetSelect(flashcard_set)}
                 className="cursor-pointer"
               >
+                {/* Header với icon actions */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1">
@@ -210,25 +247,78 @@ useEffect(() => {
                       {flashcard_set.description}
                     </p>
                   </div>
-                  <HeartSolidIcon className="h-5 w-5 text-red-500 ml-2 flex-shrink-0" />
-                </div>
+                  
+                  {/* Action buttons - Heart trái, Bookmark phải */}
+                  <div className="ml-2 flex-shrink-0 flex items-center space-x-1">
+                    {/* Favorite button - bên trái */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFavoriteSet(flashcard_set.id);
+                      }}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      title={is_favorite ? "Bỏ yêu thích" : "Thêm yêu thích"}
+                    >
+                      {is_favorite ? (
+                        <HeartSolidIcon className="h-5 w-5 text-red-500" />
+                      ) : (
+                        <HeartIcon className="h-5 w-5" />
+                      )}
+                    </button>
 
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>{flashcard_set.total_cards} thẻ</span>
-                  <div className="flex items-center">
-                    <StarIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                    {flashcard_set.average_rating.toFixed(1)}
+                    {/* Save button - bên phải */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveSet(flashcard_set.id);
+                      }}
+                      className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                      title="Bỏ lưu"
+                    >
+                      <BookmarkSolidIcon className="h-5 w-5 text-blue-500" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <span>{flashcard_set.total_cards} thẻ</span>
+                  <div className="flex items-center space-x-1">
+                    <StarIcon className="h-4 w-4 text-yellow-500" />
+                    <span>{flashcard_set.average_rating.toFixed(1)}</span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-400 mb-4">
+                  Đã lưu: {new Date(saved_at).toLocaleDateString('vi-VN')}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-xs text-gray-500">
                       {flashcard_set.difficulty === 'beginner' && 'Cơ bản'}
                       {flashcard_set.difficulty === 'intermediate' && 'Trung bình'}
                       {flashcard_set.difficulty === 'advanced' && 'Nâng cao'}
                     </span>
-                    <Button size="sm" variant="outline">
+                  </div>
+                  
+                  {/* Action buttons */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/flashcard-sets/${flashcard_set.id}`);
+                      }}
+                    >
+                      Xem chi tiết
+                    </Button>
+                    
+                    <Button 
+                      size="sm" 
+                      variant="primary"
+                      onClick={() => handleSetSelect(flashcard_set)}
+                    >
                       Học ngay
                     </Button>
                   </div>

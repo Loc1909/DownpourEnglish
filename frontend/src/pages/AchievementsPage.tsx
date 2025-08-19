@@ -1,6 +1,6 @@
 // src/pages/AchievementsPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   TrophyIcon, 
@@ -9,7 +9,17 @@ import {
   AcademicCapIcon,
   PuzzlePieceIcon,
   CalendarIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  BoltIcon,
+  HeartIcon,
+
+  ShieldCheckIcon,
+  SparklesIcon,
+  RocketLaunchIcon,
+  LightBulbIcon,
+  BookOpenIcon,
+  ClockIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { useQuery } from '@tanstack/react-query';
 import { achievementsAPI } from '../services/api';
@@ -19,10 +29,68 @@ import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 
+// Icon mapping object
+const ICON_MAP: { [key: string]: React.ComponentType<any> } = {
+  // Learning achievements
+  'trophy': TrophyIcon,
+  'star': StarIcon,
+  'academic-cap': AcademicCapIcon,
+  'book-open': BookOpenIcon,
+  'light-bulb': LightBulbIcon,
+  'target': ChartBarIcon,
+  
+  // Gaming achievements
+  'puzzle-piece': PuzzlePieceIcon,
+  'bolt': BoltIcon,
+  'rocket-launch': RocketLaunchIcon,
+  'sparkles': SparklesIcon,
+  
+  // Streak achievements
+  'fire': FireIcon,
+  'calendar': CalendarIcon,
+  'clock': ClockIcon,
+  
+  // Milestone achievements
+  'shield-check': ShieldCheckIcon,
+  'heart': HeartIcon,
+  'check-circle': CheckCircleIcon,
+  
+  // Default fallback
+  'default': TrophyIcon
+};
+
+// Component để render achievement icon
+const AchievementIcon: React.FC<{ 
+  iconName: string; 
+  rarity: string; 
+  size?: string;
+  className?: string;
+}> = ({ iconName, rarity, size = 'h-12 w-12', className = '' }) => {
+  // Lấy icon component từ mapping
+  const IconComponent = ICON_MAP[iconName] || ICON_MAP['default'];
+  
+  // Màu sắc dựa trên rarity
+  const rarityColors = {
+    common: 'text-gray-500',
+    uncommon: 'text-green-500',
+    rare: 'text-blue-500',
+    epic: 'text-purple-500',
+    legendary: 'text-yellow-500'
+  };
+  
+  const colorClass = rarityColors[rarity as keyof typeof rarityColors] || rarityColors.common;
+  
+  return (
+    <div className={`${size} ${colorClass} ${className}`}>
+      <IconComponent className="w-full h-full" />
+    </div>
+  );
+};
+
 const AchievementsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Fetch all achievements - returns PaginatedResponse<Achievement>
+  // Fetch all achievements
   const { 
     data: allAchievementsResponse, 
     isLoading: loadingAll 
@@ -31,7 +99,7 @@ const AchievementsPage: React.FC = () => {
     queryFn: () => achievementsAPI.getAll().then(res => res.data)
   });
 
-  // Fetch user achievements - returns UserAchievement[]
+  // Fetch user achievements
   const { 
     data: userAchievementsResponse, 
     isLoading: loadingUser 
@@ -42,9 +110,10 @@ const AchievementsPage: React.FC = () => {
 
   const isLoading = loadingAll || loadingUser;
 
-  // Extract data correctly based on API response format
-  // Backend trả về array chứ không phải paginated response
-  const allAchievements = allAchievementsResponse || [];
+  // Extract data correctly
+  const allAchievements = React.useMemo(() => {
+    return allAchievementsResponse?.results || [];
+  }, [allAchievementsResponse]);
   const userAchievements = userAchievementsResponse || [];
 
   // Create map of earned achievements
@@ -85,15 +154,15 @@ const AchievementsPage: React.FC = () => {
     }
   };
 
-  const getRarityIcon = (rarity: string) => {
-    switch (rarity) {
-      case 'common': return '🥉';
-      case 'uncommon': return '🥈';
-      case 'rare': return '🥇';
-      case 'epic': return '💎';
-      case 'legendary': return '👑';
-      default: return '🏆';
-    }
+  const getRarityDisplay = (rarity: string) => {
+    const rarityMap = {
+      common: 'Thường',
+      uncommon: 'Không thường',
+      rare: 'Hiếm', 
+      epic: 'Sử thi',
+      legendary: 'Huyền thoại'
+    };
+    return rarityMap[rarity as keyof typeof rarityMap] || 'Thường';
   };
 
   if (isLoading) {
@@ -126,13 +195,13 @@ const AchievementsPage: React.FC = () => {
         className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
       >
         <Card className="text-center">
-          <div className="text-3xl mb-2">🏆</div>
+          <TrophyIcon className="h-12 w-12 text-yellow-500 mx-auto mb-2" />
           <h3 className="text-2xl font-bold text-gray-900">{userAchievements.length}</h3>
           <p className="text-gray-600">Thành tích đã đạt</p>
         </Card>
 
         <Card className="text-center">
-          <div className="text-3xl mb-2">⭐</div>
+          <StarIcon className="h-12 w-12 text-blue-500 mx-auto mb-2" />
           <h3 className="text-2xl font-bold text-gray-900">
             {userAchievements.reduce((sum: number, ua: UserAchievement) => sum + ua.achievement.points, 0)}
           </h3>
@@ -140,7 +209,7 @@ const AchievementsPage: React.FC = () => {
         </Card>
 
         <Card className="text-center">
-          <div className="text-3xl mb-2">📈</div>
+          <ChartBarIcon className="h-12 w-12 text-green-500 mx-auto mb-2" />
           <h3 className="text-2xl font-bold text-gray-900">
             {allAchievements.length > 0 ? Math.round((userAchievements.length / allAchievements.length) * 100) : 0}%
           </h3>
@@ -209,7 +278,7 @@ const AchievementsPage: React.FC = () => {
                   className={`relative overflow-hidden transition-all duration-300 ${
                     isEarned 
                       ? 'ring-2 ring-green-200 bg-gradient-to-br from-green-50 to-white' 
-                      : 'hover:shadow-md grayscale hover:grayscale-0'
+                      : 'hover:shadow-md opacity-75 hover:opacity-100'
                   }`}
                   hover={!isEarned}
                 >
@@ -224,15 +293,20 @@ const AchievementsPage: React.FC = () => {
 
                   {/* Achievement Icon */}
                   <div className="text-center mb-4">
-                    <div className="text-6xl mb-2">
-                      {achievement.icon || getRarityIcon(achievement.rarity)}
+                    <div className="mb-4 flex justify-center">
+                      <AchievementIcon 
+                        iconName={achievement.icon} 
+                        rarity={achievement.rarity}
+                        size="h-16 w-16"
+                        className={`${isEarned ? '' : 'grayscale'}`}
+                      />
                     </div>
                     <Badge 
                       variant="secondary" 
                       size="sm"
                       className={getRarityColor(achievement.rarity)}
                     >
-                      {achievement.rarity_display}
+                      {getRarityDisplay(achievement.rarity)}
                     </Badge>
                   </div>
 

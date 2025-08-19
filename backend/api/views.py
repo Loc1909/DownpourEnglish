@@ -37,8 +37,8 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
     queryset = FlashcardSet.objects.select_related('creator', 'topic').filter(is_public=True)
     serializer_class = serializers.FlashcardSetSerializer
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['created_at', 'total_saves', 'average_rating']
-    ordering = ['-created_at']
+    ordering_fields = ['created_at', 'total_saves', 'average_rating'] # Các field có thể sort
+    ordering = ['-created_at'] # Xếp giảm dần
 
     def get_serializer_class(self):
         if self.action == 'retrieve':

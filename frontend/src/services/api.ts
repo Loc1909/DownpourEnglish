@@ -245,12 +245,12 @@ export const gameAPI = {
     api.get('/game-sessions/leaderboard/', { params: { game_type: gameType } }),
 };
 
-// Achievements API - Backend trả về array, không phải paginated
+// Achievements API - Backend trả về PaginatedResponse<Achievement>
 export const achievementsAPI = {
   getAll: (params?: {
     page?: number;
     page_size?: number;
-  }): Promise<AxiosResponse<Achievement[]>> =>  // Thay đổi từ PaginatedResponse<Achievement> thành Achievement[]
+  }): Promise<AxiosResponse<PaginatedResponse<Achievement>>> =>
     api.get('/achievements/', { params }),
   
   // This returns array, not paginated (custom action)
