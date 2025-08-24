@@ -99,7 +99,7 @@ Dự án này được phân phối dưới giấy phép MIT. Xem file `LICENSE`
 
 - Email: 93.nguyentanloc2018@gmail.com
 - GitHub: [Loc1909](https://github.com/Loc1909)
-- LinkedIn: [Your Name](https://www.linkedin.com/in/locnguyen-a60502308/)
+- LinkedIn: [locnguyen-a60502308](https://www.linkedin.com/in/locnguyen-a60502308/)
 
 ---
 
