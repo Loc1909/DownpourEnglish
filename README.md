@@ -34,7 +34,7 @@ Một hệ thống học tiếng Anh toàn diện kết hợp flashcard, mini ga
 - **MySQL**: Cơ sở dữ liệu quan hệ
 
 ### Frontend  
-- **React.js**: Thư viện JavaScript để xây dựng giao diện người dùng
+- **React.js**: Xây dựng giao diện người dùng
 - **Chart.js**: Thư viện biểu đồ tương tác
 - **Axios**: HTTP client cho việc gọi API
 
@@ -44,16 +44,16 @@ Một hệ thống học tiếng Anh toàn diện kết hợp flashcard, mini ga
 ## 🚀 Cài đặt và chạy dự án
 
 ### Yêu cầu hệ thống
-- Python 3.8+
-- Node.js 14+
-- MySQL 8.0+
+- Python
+- Node.js
+- MySQL
 - npm hoặc yarn
 
 ### Backend Setup
 ```bash
 # Clone repository
 git clone <repository-url>
-cd english-learning-system
+cd backend
 
 # Tạo virtual environment
 python -m venv venv
@@ -90,73 +90,6 @@ npm install
 npm start
 ```
 
-## 📁 Cấu trúc dự án
-
-```
-english-learning-system/
-├── backend/
-│   ├── apps/
-│   │   ├── users/          # Quản lý người dùng
-│   │   ├── flashcards/     # Flashcard system
-│   │   ├── games/          # Mini games
-│   │   ├── ai_assistant/   # AI features
-│   │   └── analytics/      # Thống kê và báo cáo
-│   ├── config/
-│   ├── requirements.txt
-│   └── manage.py
-├── frontend/
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── pages/          # Các trang chính
-│   │   ├── services/       # API calls
-│   │   ├── utils/          # Utility functions
-│   │   └── assets/         # Hình ảnh, CSS
-│   ├── package.json
-│   └── public/
-└── README.md
-```
-
-## 🎯 API Endpoints
-
-### Authentication
-```
-POST /api/auth/login/          # Đăng nhập
-POST /api/auth/register/       # Đăng ký
-POST /api/auth/logout/         # Đăng xuất
-GET  /api/auth/user/           # Thông tin người dùng
-```
-
-### Flashcards
-```
-GET    /api/flashcards/        # Danh sách flashcards
-POST   /api/flashcards/        # Tạo flashcard mới
-GET    /api/flashcards/{id}/   # Chi tiết flashcard
-PUT    /api/flashcards/{id}/   # Cập nhật flashcard
-DELETE /api/flashcards/{id}/   # Xóa flashcard
-```
-
-### Games
-```
-GET  /api/games/word-match/    # Trò chơi ghép từ
-POST /api/games/word-match/    # Gửi kết quả
-GET  /api/games/guess-word/    # Guess the word
-POST /api/games/crossword/     # Câu đố ô chữ
-```
-
-### AI Assistant
-```
-POST /api/ai/suggest-words/    # Gợi ý từ vựng
-POST /api/ai/feedback/         # Gửi feedback
-GET  /api/ai/progress/         # Phân tích tiến độ
-```
-
-## 🤝 Đóng góp
-
-1. Fork dự án
-2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
 
 ## 📝 License
 
@@ -164,9 +97,9 @@ Dự án này được phân phối dưới giấy phép MIT. Xem file `LICENSE`
 
 ## 📞 Liên hệ
 
-- Email: your-email@example.com
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [Your Name](https://linkedin.com/in/your-profile)
+- Email: 93.nguyentanloc2018@gmail.com
+- GitHub: [Loc1909](https://github.com/Loc1909)
+- LinkedIn: [Your Name](https://www.linkedin.com/in/locnguyen-a60502308/)
 
 ---
 
