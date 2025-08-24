@@ -12,12 +12,33 @@ from api.models import (
     UserFeedback, DailyStats
 )
 from api import serializers
+from api.achievement_service import AchievementService
 
 
-class TopicViewSet(viewsets.ViewSet, generics.ListAPIView):
+class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
     queryset = Topic.objects.filter(is_active=True)
     serializer_class = serializers.TopicSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return serializers.CreateTopicSerializer
+        return super().get_serializer_class()
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        topic = serializer.save()
+        
+        return Response(
+            serializers.TopicSerializer(topic).data,
+            status=status.HTTP_201_CREATED
+        )
 
     @action(methods=['get'], detail=True, url_path='flashcard-sets')
     def get_flashcard_sets(self, request, pk):
@@ -117,11 +138,27 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         # Cập nhật lại total_saves dựa trên số records thực tế
         flashcard_set.update_total_saves()
 
-        return Response({
+        # Kiểm tra và trao thành tích sau khi lưu flashcard
+        new_achievements = AchievementService.check_and_award_achievements(request.user)
+        
+        response_data = {
             'message': message,
             'is_saved': is_saved,
             'total_saves': flashcard_set.total_saves
-        })
+        }
+        
+        if new_achievements:
+            response_data['new_achievements'] = [
+                {
+                    'name': achievement.name,
+                    'description': achievement.description,
+                    'points': achievement.points,
+                    'rarity': achievement.rarity
+                }
+                for achievement in new_achievements
+            ]
+        
+        return Response(response_data)
 
     @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
     def rate(self, request, pk):
@@ -149,10 +186,26 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         flashcard_set.average_rating = avg_rating or 0
         flashcard_set.save()
 
-        return Response({
+        # Kiểm tra và trao thành tích sau khi đánh giá
+        new_achievements = AchievementService.check_and_award_achievements(request.user)
+        
+        response_data = {
             'message': 'Đã đánh giá thành công',
             'average_rating': flashcard_set.average_rating
-        })
+        }
+        
+        if new_achievements:
+            response_data['new_achievements'] = [
+                {
+                    'name': achievement.name,
+                    'description': achievement.description,
+                    'points': achievement.points,
+                    'rarity': achievement.rarity
+                }
+                for achievement in new_achievements
+            ]
+        
+        return Response(response_data)
 
     @action(methods=['get'], detail=True, url_path='flashcards')
     def get_flashcards(self, request, pk):
@@ -285,11 +338,27 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
                 words_reviewed=F('words_reviewed') + (0 if created else 1)
             )
 
-        return Response({
+        # Kiểm tra và trao thành tích sau khi học
+        new_achievements = AchievementService.check_and_award_achievements(request.user)
+        
+        response_data = {
             'message': 'Đã cập nhật tiến trình học tập',
             'mastery_level': progress.mastery_level,
             'times_reviewed': progress.times_reviewed
-        })
+        }
+        
+        if new_achievements:
+            response_data['new_achievements'] = [
+                {
+                    'name': achievement.name,
+                    'description': achievement.description,
+                    'points': achievement.points,
+                    'rarity': achievement.rarity
+                }
+                for achievement in new_achievements
+            ]
+        
+        return Response(response_data)
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -319,11 +388,23 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
                 from rest_framework.authtoken.models import Token
                 token, created = Token.objects.get_or_create(user=user)
 
-                return Response({
+                # Trao thành tích đăng ký tài khoản
+                registration_achievement = AchievementService.award_registration_achievement(user)
+
+                response_data = {
                     'message': 'Đăng ký thành công',
                     'token': token.key,
                     'user': serializers.UserSerializer(user).data
-                }, status=status.HTTP_201_CREATED)
+                }
+                
+                if registration_achievement:
+                    response_data['new_achievement'] = {
+                        'name': registration_achievement.name,
+                        'description': registration_achievement.description,
+                        'points': registration_achievement.points
+                    }
+
+                return Response(response_data, status=status.HTTP_201_CREATED)
             except Exception as e:
                 print(f"Error creating user: {str(e)}")
                 return Response({
@@ -509,7 +590,23 @@ class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.List
             daily_stats.points_earned = F('points_earned') + game_session.score
             daily_stats.save()
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # Kiểm tra và trao thành tích sau khi chơi game
+        new_achievements = AchievementService.check_and_award_achievements(request.user)
+        
+        response_data = {
+            'game_session': serializer.data,
+            'new_achievements': [
+                {
+                    'name': achievement.name,
+                    'description': achievement.description,
+                    'points': achievement.points,
+                    'rarity': achievement.rarity
+                }
+                for achievement in new_achievements
+            ] if new_achievements else []
+        }
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
     @action(methods=['get'], detail=False)
     def leaderboard(self, request):
@@ -585,6 +682,54 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.AchievementSerializer
     permission_classes = [permissions.AllowAny]
 
+    def list(self, request, *args, **kwargs):
+        """Lấy danh sách thành tích với tiến trình của user (nếu đã đăng nhập)"""
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        
+        # Nếu user đã đăng nhập, thêm thông tin tiến trình
+        if request.user.is_authenticated:
+            # Lấy tất cả thành tích đã đạt được của user để tối ưu performance
+            user_achievements = UserAchievement.objects.filter(
+                user=request.user
+            ).values_list('achievement_id', flat=True)
+            
+            for achievement_data in data:
+                achievement_id = achievement_data['id']
+                try:
+                    achievement = Achievement.objects.get(id=achievement_id)
+                    progress_value = AchievementService.get_user_progress_for_achievement(
+                        request.user, achievement
+                    )
+                    achievement_data['user_progress'] = progress_value
+                    
+                    # Kiểm tra xem user đã đạt được thành tích này chưa
+                    if achievement_id in user_achievements:
+                        # User đã đạt được thành tích này
+                        user_achievement = UserAchievement.objects.get(
+                            user=request.user, 
+                            achievement=achievement
+                        )
+                        achievement_data['is_earned'] = True
+                        achievement_data['earned_at'] = user_achievement.earned_at
+                        achievement_data['progress_percentage'] = 100
+                    else:
+                        # User chưa đạt được thành tích này
+                        achievement_data['is_earned'] = False
+                        achievement_data['earned_at'] = None
+                        # Tính phần trăm tiến trình
+                        if achievement.requirement_value > 0:
+                            progress_percentage = min(100, (progress_value / achievement.requirement_value) * 100)
+                        else:
+                            progress_percentage = 0
+                        achievement_data['progress_percentage'] = round(progress_percentage, 1)
+                        
+                except Achievement.DoesNotExist:
+                    pass
+        
+        return Response(data)
+
     @action(methods=['get'], detail=False, permission_classes=[permissions.IsAuthenticated])
     def my_achievements(self, request):
         """Thành tích của user hiện tại"""
@@ -594,6 +739,29 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         serializer = serializers.UserAchievementSerializer(user_achievements, many=True)
         return Response(serializer.data)
+    
+    @action(methods=['post'], detail=False, permission_classes=[permissions.IsAuthenticated])
+    def check_achievements(self, request):
+        """Kiểm tra và trao thành tích mới cho user"""
+        new_achievements = AchievementService.check_and_award_achievements(request.user)
+        
+        if new_achievements:
+            return Response({
+                'message': f'Đã đạt được {len(new_achievements)} thành tích mới!',
+                'new_achievements': [
+                    {
+                        'name': achievement.name,
+                        'description': achievement.description,
+                        'points': achievement.points,
+                        'rarity': achievement.rarity
+                    }
+                    for achievement in new_achievements
+                ]
+            })
+        else:
+            return Response({
+                'message': 'Chưa có thành tích mới nào'
+            })
 
 
 class DailyStatsViewSet(viewsets.ViewSet, generics.ListAPIView):

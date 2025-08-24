@@ -160,6 +160,7 @@ class TopicAdmin(admin.ModelAdmin):
             'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',)
         }
 
+
 # Inline for Flashcards in FlashcardSet
 class FlashcardInline(admin.TabularInline):
     model = Flashcard
@@ -171,8 +172,8 @@ class FlashcardInline(admin.TabularInline):
 # FlashcardSet Admin
 class FlashcardSetAdmin(admin.ModelAdmin):
     list_display = (
-    'title', 'topic', 'creator', 'difficulty', 'total_cards', 'total_saves', 'average_rating', 'is_public',
-    'created_at')
+        'title', 'topic', 'creator', 'difficulty', 'total_cards', 'total_saves', 'average_rating', 'is_public',
+        'created_at')
     list_filter = ('difficulty', 'is_public', 'topic', 'created_at')
     search_fields = ('title', 'description', 'creator__username')
     ordering = ('-created_at',)
@@ -265,8 +266,8 @@ class SavedFlashcardSetAdmin(admin.ModelAdmin):
 # UserProgress Admin
 class UserProgressAdmin(admin.ModelAdmin):
     list_display = (
-    'user', 'flashcard_display', 'mastery_level', 'accuracy_rate', 'times_reviewed', 'is_learned', 'is_difficult',
-    'last_reviewed')
+        'user', 'flashcard_display', 'mastery_level', 'accuracy_rate', 'times_reviewed', 'is_learned', 'is_difficult',
+        'last_reviewed')
     list_filter = ('is_learned', 'is_difficult', 'difficulty_rating', 'last_reviewed')
     search_fields = ('user__username', 'flashcard__vietnamese', 'flashcard__english')
     ordering = ('-last_reviewed',)
@@ -300,7 +301,7 @@ class UserProgressAdmin(admin.ModelAdmin):
 # GameSession Admin
 class GameSessionAdmin(admin.ModelAdmin):
     list_display = (
-    'user', 'game_type', 'score', 'accuracy_percentage', 'total_questions', 'time_spent', 'completed_at')
+        'user', 'game_type', 'score', 'accuracy_percentage', 'total_questions', 'time_spent', 'completed_at')
     list_filter = ('game_type', 'completed_at')
     search_fields = ('user__username',)
     ordering = ('-completed_at',)
@@ -341,6 +342,45 @@ class AchievementAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         })
     )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+
+        # Tùy chỉnh help text cho field icon
+        form.base_fields['icon'].help_text = """
+        <strong>Gợi ý icon theo loại thành tích:</strong><br>
+        <div style="margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+            <strong>🎓 Học tập (Learning):</strong><br>
+            • <code>academic-cap</code> - Mũ tốt nghiệp<br>
+            • <code>book-open</code> - Sách mở<br>
+            • <code>light-bulb</code> - Bóng đèn ý tưởng<br>
+            • <code>check-circle</code> - Dấu tích hoàn thành<br><br>
+
+            <strong>🎮 Chơi game (Gaming):</strong><br>
+            • <code>puzzle-piece</code> - Mảnh ghép<br>
+            • <code>bolt</code> - Tia sét nhanh<br>
+            • <code>rocket-launch</code> - Tên lửa<br>
+            • <code>sparkles</code> - Tia sáng<br><br>
+
+            <strong>🔥 Chuỗi ngày (Streak):</strong><br>
+            • <code>fire</code> - Lửa<br>
+            • <code>calendar</code> - Lịch<br>
+            • <code>clock</code> - Đồng hồ<br><br>
+
+            <strong>⭐ Cột mốc (Milestone):</strong><br>
+            • <code>trophy</code> - Cúp vàng<br>
+            • <code>star</code> - Ngôi sao<br>
+            • <code>shield-check</code> - Khiên bảo vệ<br>
+            • <code>heart</code> - Trái tim<br>
+        </div>
+        <em>Chỉ nhập tên icon (ví dụ: fire), không có dấu ngoặc kép.</em>
+        """
+
+        form.base_fields['achievement_type'].help_text = "Chọn loại thành tích để có gợi ý icon phù hợp ở trên"
+        form.base_fields['requirement_value'].help_text = "Giá trị cần đạt để mở khóa thành tích này"
+        form.base_fields['points'].help_text = "Điểm thưởng khi đạt được thành tích"
+
+        return form
 
 
 # UserAchievement Admin

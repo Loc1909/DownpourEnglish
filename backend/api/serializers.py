@@ -93,6 +93,12 @@ class TopicSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'icon', 'flashcard_sets_count']
 
 
+class CreateTopicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Topic
+        fields = ['name', 'description', 'icon']
+
+
 class FlashcardSerializer(serializers.ModelSerializer):
     user_progress = serializers.SerializerMethodField()
 

@@ -107,6 +107,13 @@ export const topicsAPI = {
   }): Promise<AxiosResponse<PaginatedResponse<Topic>>> =>
     api.get('/topics/', { params }),
   
+  create: (data: {
+    name: string;
+    description: string;
+    icon: string;
+  }): Promise<AxiosResponse<Topic>> =>
+    api.post('/topics/', data),
+  
   // This returns array, not paginated (custom action)
   getFlashcardSets: (topicId: number): Promise<AxiosResponse<FlashcardSet[]>> =>
     api.get(`/topics/${topicId}/flashcard-sets/`),
@@ -245,18 +252,26 @@ export const gameAPI = {
     api.get('/game-sessions/leaderboard/', { params: { game_type: gameType } }),
 };
 
-// Achievements API - Backend trả về PaginatedResponse<Achievement>
+// Achievements API - Backend giờ trả về array trực tiếp, không pagination
 export const achievementsAPI = {
   getAll: (params?: {
     page?: number;
     page_size?: number;
-  }): Promise<AxiosResponse<PaginatedResponse<Achievement>>> =>
+  }): Promise<AxiosResponse<Achievement[]>> =>  // Trả về array thay vì PaginatedResponse
     api.get('/achievements/', { params }),
   
   // This returns array, not paginated (custom action)
   getUserAchievements: (): Promise<AxiosResponse<UserAchievement[]>> =>
     api.get('/achievements/my_achievements/'),
+
+  // Method mới để kiểm tra thành tích
+  checkAchievements: (): Promise<AxiosResponse<{
+    message: string;
+    new_achievements: Achievement[];
+  }>> =>
+    api.post('/achievements/check_achievements/'),
 };
+
 
 // Daily Stats API - Uses pagination
 export const statsAPI = {

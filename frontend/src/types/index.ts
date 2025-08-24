@@ -90,6 +90,11 @@ export interface Achievement {
   points: number;
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   rarity_display: string;
+  // Các trường được thêm vào động từ backend
+  // is_earned?: boolean;
+  // earned_at?: string;
+  // progress_percentage?: number;
+  // user_progress?: number;
 }
 
 export interface UserAchievement {
@@ -98,6 +103,9 @@ export interface UserAchievement {
   earned_at: string;
   progress_value: number;
   progress_percentage: number;
+  // Các trường bổ sung từ backend
+  // user_progress?: number;
+  // is_earned?: boolean;
 }
 
 export interface DailyStats {

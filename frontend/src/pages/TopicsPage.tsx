@@ -11,11 +11,13 @@ import {
   BriefcaseIcon,
   HeartIcon,
   MusicalNoteIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import { topicsAPI } from '../services/api';
 import { Topic } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
+import Button from '../components/common/Button';
 
 const TopicsPage: React.FC = () => {
   const { data: topicsResponse, isLoading, error } = useQuery({
@@ -100,12 +102,25 @@ const TopicsPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Chủ đề học từ vựng
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Khám phá các chủ đề đa dạng và bắt đầu hành trình học từ vựng tiếng Anh của bạn
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+          <div className="flex-1">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Chủ đề học từ vựng
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl">
+              Khám phá các chủ đề đa dạng và bắt đầu hành trình học từ vựng tiếng Anh của bạn
+            </p>
+          </div>
+          <div className="mt-4 sm:mt-0">
+            <Button
+              as={Link}
+              to="/create-topic"
+              leftIcon={<PlusIcon className="h-4 w-4" />}
+            >
+              Tạo chủ đề mới
+            </Button>
+          </div>
+        </div>
       </motion.div>
 
       {/* Topics Grid */}

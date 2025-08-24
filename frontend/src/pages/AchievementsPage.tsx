@@ -12,7 +12,6 @@ import {
   CheckCircleIcon,
   BoltIcon,
   HeartIcon,
-
   ShieldCheckIcon,
   SparklesIcon,
   RocketLaunchIcon,
@@ -31,45 +30,41 @@ import EmptyState from '../components/common/EmptyState';
 
 // Icon mapping object
 const ICON_MAP: { [key: string]: React.ComponentType<any> } = {
-  // Learning achievements
   'trophy': TrophyIcon,
   'star': StarIcon,
   'academic-cap': AcademicCapIcon,
   'book-open': BookOpenIcon,
   'light-bulb': LightBulbIcon,
   'target': ChartBarIcon,
-  
-  // Gaming achievements
   'puzzle-piece': PuzzlePieceIcon,
   'bolt': BoltIcon,
   'rocket-launch': RocketLaunchIcon,
   'sparkles': SparklesIcon,
-  
-  // Streak achievements
   'fire': FireIcon,
   'calendar': CalendarIcon,
   'clock': ClockIcon,
-  
-  // Milestone achievements
   'shield-check': ShieldCheckIcon,
   'heart': HeartIcon,
   'check-circle': CheckCircleIcon,
-  
-  // Default fallback
   'default': TrophyIcon
 };
 
-// Component để render achievement icon
+// Enhanced Achievement interface để handle dữ liệu mới từ backend
+interface EnhancedAchievement extends Achievement {
+  user_progress?: number;
+  is_earned?: boolean;
+  earned_at?: string;
+  progress_percentage?: number;
+}
+
 const AchievementIcon: React.FC<{ 
   iconName: string; 
   rarity: string; 
   size?: string;
   className?: string;
 }> = ({ iconName, rarity, size = 'h-12 w-12', className = '' }) => {
-  // Lấy icon component từ mapping
   const IconComponent = ICON_MAP[iconName] || ICON_MAP['default'];
   
-  // Màu sắc dựa trên rarity
   const rarityColors = {
     common: 'text-gray-500',
     uncommon: 'text-green-500',
@@ -90,49 +85,32 @@ const AchievementIcon: React.FC<{
 const AchievementsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Fetch all achievements
+  // Fetch all achievements - backend giờ trả về array trực tiếp, không còn pagination
   const { 
-    data: allAchievementsResponse, 
-    isLoading: loadingAll 
+    data: achievements = [], 
+    isLoading 
   } = useQuery({
     queryKey: ['achievements'],
-    queryFn: () => achievementsAPI.getAll().then(res => res.data)
+    queryFn: () => achievementsAPI.getAll().then(res => res.data as EnhancedAchievement[])
   });
-
-  // Fetch user achievements
-  const { 
-    data: userAchievementsResponse, 
-    isLoading: loadingUser 
-  } = useQuery({
-    queryKey: ['user-achievements'],
-    queryFn: () => achievementsAPI.getUserAchievements().then(res => res.data)
-  });
-
-  const isLoading = loadingAll || loadingUser;
-
-  // Extract data correctly
-  const allAchievements = React.useMemo(() => {
-    return allAchievementsResponse?.results || [];
-  }, [allAchievementsResponse]);
-  const userAchievements = userAchievementsResponse || [];
-
-  // Create map of earned achievements
-  const earnedMap = React.useMemo(() => {
-    const map = new Map();
-    userAchievements.forEach((ua: UserAchievement) => {
-      map.set(ua.achievement.id, ua);
-    });
-    return map;
-  }, [userAchievements]);
 
   // Filter achievements by category
   const filteredAchievements = React.useMemo(() => {
-    if (selectedCategory === 'all') return allAchievements;
+    if (selectedCategory === 'all') return achievements;
     if (selectedCategory === 'earned') {
-      return allAchievements.filter((a: Achievement) => earnedMap.has(a.id));
+      return achievements.filter((a: EnhancedAchievement) => a.is_earned);
     }
-    return allAchievements.filter((a: Achievement) => a.achievement_type === selectedCategory);
-  }, [allAchievements, selectedCategory, earnedMap]);
+    return achievements.filter((a: EnhancedAchievement) => a.achievement_type === selectedCategory);
+  }, [achievements, selectedCategory]);
+
+  // Stats calculations
+  const earnedCount = achievements.filter((a: EnhancedAchievement) => a.is_earned).length;
+  const totalPoints = achievements
+    .filter((a: EnhancedAchievement) => a.is_earned)
+    .reduce((sum, a) => sum + a.points, 0);
+  const completionPercentage = achievements.length > 0 
+    ? Math.round((earnedCount / achievements.length) * 100) 
+    : 0;
 
   const categories = [
     { id: 'all', name: 'Tất cả', icon: TrophyIcon },
@@ -196,23 +174,19 @@ const AchievementsPage: React.FC = () => {
       >
         <Card className="text-center">
           <TrophyIcon className="h-12 w-12 text-yellow-500 mx-auto mb-2" />
-          <h3 className="text-2xl font-bold text-gray-900">{userAchievements.length}</h3>
+          <h3 className="text-2xl font-bold text-gray-900">{earnedCount}</h3>
           <p className="text-gray-600">Thành tích đã đạt</p>
         </Card>
 
         <Card className="text-center">
           <StarIcon className="h-12 w-12 text-blue-500 mx-auto mb-2" />
-          <h3 className="text-2xl font-bold text-gray-900">
-            {userAchievements.reduce((sum: number, ua: UserAchievement) => sum + ua.achievement.points, 0)}
-          </h3>
+          <h3 className="text-2xl font-bold text-gray-900">{totalPoints}</h3>
           <p className="text-gray-600">Điểm thành tích</p>
         </Card>
 
         <Card className="text-center">
           <ChartBarIcon className="h-12 w-12 text-green-500 mx-auto mb-2" />
-          <h3 className="text-2xl font-bold text-gray-900">
-            {allAchievements.length > 0 ? Math.round((userAchievements.length / allAchievements.length) * 100) : 0}%
-          </h3>
+          <h3 className="text-2xl font-bold text-gray-900">{completionPercentage}%</h3>
           <p className="text-gray-600">Hoàn thành</p>
         </Card>
       </motion.div>
@@ -261,11 +235,10 @@ const AchievementsPage: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {filteredAchievements.map((achievement: Achievement, index: number) => {
-            const userAchievement = earnedMap.get(achievement.id);
-            const isEarned = !!userAchievement;
-            
-            const progressPercentage = userAchievement?.progress_percentage || 0;
+          {filteredAchievements.map((achievement: EnhancedAchievement, index: number) => {
+            const isEarned = achievement.is_earned || false;
+            const progressPercentage = achievement.progress_percentage || 0;
+            const userProgress = achievement.user_progress || 0;
 
             return (
               <motion.div
@@ -328,7 +301,7 @@ const AchievementsPage: React.FC = () => {
                   </div>
 
                   {/* Progress Bar (for unearned achievements) */}
-                  {!isEarned && userAchievement && (
+                  {!isEarned && progressPercentage > 0 && (
                     <div className="mb-4">
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
                         <span>Tiến trình</span>
@@ -341,16 +314,16 @@ const AchievementsPage: React.FC = () => {
                         />
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {userAchievement.progress_value} / {achievement.requirement_value}
+                        {userProgress} / {achievement.requirement_value}
                       </div>
                     </div>
                   )}
 
                   {/* Earned Date */}
-                  {isEarned && userAchievement && (
+                  {isEarned && achievement.earned_at && (
                     <div className="flex items-center justify-center text-sm text-green-600">
                       <CalendarIcon className="h-4 w-4 mr-1" />
-                      Đạt được ngày {new Date(userAchievement.earned_at).toLocaleDateString('vi-VN')}
+                      Đạt được ngày {new Date(achievement.earned_at).toLocaleDateString('vi-VN')}
                     </div>
                   )}
                 </Card>
