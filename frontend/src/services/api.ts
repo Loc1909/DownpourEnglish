@@ -144,6 +144,15 @@ export const flashcardSetsAPI = {
   }): Promise<AxiosResponse<FlashcardSet>> =>
     api.post('/flashcard-sets/', data),
   
+  update: (id: number, data: Partial<{
+    title: string;
+    description: string;
+    topic: number;
+    is_public: boolean;
+    difficulty: string;
+  }>): Promise<AxiosResponse<FlashcardSet>> =>
+    api.patch(`/flashcard-sets/${id}/`, data),
+  
   save: (id: number): Promise<AxiosResponse<{
     message: string;
     is_saved: boolean;

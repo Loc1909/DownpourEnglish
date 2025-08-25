@@ -5,6 +5,7 @@ from django.db.models import Q, Count, Avg, F, Sum, Max
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db import transaction
+from math import ceil
 
 from api.models import (
     User, Topic, FlashcardSet, Flashcard, SavedFlashcardSet,
@@ -54,7 +55,7 @@ class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
         return Response(serializer.data)
 
 
-class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.UpdateAPIView):
     queryset = FlashcardSet.objects.select_related('creator', 'topic').filter(is_public=True)
     serializer_class = serializers.FlashcardSetSerializer
     filter_backends = [filters.OrderingFilter]
@@ -66,6 +67,8 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
             return serializers.FlashcardSetDetailSerializer
         elif self.action == 'create':
             return serializers.CreateFlashcardSetSerializer
+        elif self.action in ['update', 'partial_update']:
+            return serializers.UpdateFlashcardSetSerializer
         return super().get_serializer_class()
 
     def get_permissions(self):
@@ -107,6 +110,21 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
             serializers.FlashcardSetSerializer(flashcard_set, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Chỉ cho phép creator chỉnh sửa
+        if instance.creator != request.user:
+            return Response({'error': 'Bạn không có quyền chỉnh sửa bộ flashcard này'}, status=status.HTTP_403_FORBIDDEN)
+
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Trả về dữ liệu chi tiết sau khi cập nhật
+        detail = serializers.FlashcardSetDetailSerializer(instance, context={'request': request})
+        return Response(detail.data)
 
     # views.py - Fixed save action
     @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
@@ -325,17 +343,46 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
 
             # Cập nhật thống kê hàng ngày
             today = timezone.now().date()
-            daily_stats, _ = DailyStats.objects.get_or_create(
-                user=request.user, date=today
+            daily_stats, created_daily = DailyStats.objects.get_or_create(
+                user=request.user, date=today,
+                defaults={
+                    'cards_studied': 0,
+                    'new_words_learned': 0,
+                    'words_reviewed': 0,
+                    'time_spent': 0,
+                    'games_played': 0,
+                    'points_earned': 0,
+                    'accuracy_rate': 0.0
+                }
             )
+            
+            if not created_daily:
+                # Nếu record đã tồn tại, cập nhật bằng F() expression
+                DailyStats.objects.filter(
+                    user=request.user, date=today
+                ).update(
+                    cards_studied=F('cards_studied') + 1,
+                    new_words_learned=F('new_words_learned') + (1 if created else 0),
+                    words_reviewed=F('words_reviewed') + (0 if created else 1)
+                )
+            else:
+                # Nếu record mới, cập nhật trực tiếp
+                daily_stats.cards_studied = 1
+                daily_stats.new_words_learned = 1 if created else 0
+                daily_stats.words_reviewed = 0 if created else 1
+                daily_stats.save()
 
-            # Sử dụng F() expression cho daily_stats
-            DailyStats.objects.filter(
-                user=request.user, date=today
-            ).update(
-                cards_studied=F('cards_studied') + 1,
-                new_words_learned=F('new_words_learned') + (1 if created else 0),
-                words_reviewed=F('words_reviewed') + (0 if created else 1)
+            # Cập nhật accuracy_rate theo trung bình toàn bộ UserProgress
+            agg = UserProgress.objects.filter(user=request.user).aggregate(
+                total_correct=Sum('times_correct'),
+                total_reviewed=Sum('times_reviewed')
+            )
+            total_correct = agg.get('total_correct') or 0
+            total_reviewed = agg.get('total_reviewed') or 0
+            daily_accuracy = round((total_correct / total_reviewed) * 100, 1) if total_reviewed > 0 else 0.0
+
+            DailyStats.objects.filter(user=request.user, date=today).update(
+                accuracy_rate=daily_accuracy
             )
 
         # Kiểm tra và trao thành tích sau khi học
@@ -577,18 +624,61 @@ class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.List
         with transaction.atomic():
             game_session = serializer.save(user=request.user)
 
-            # Cập nhật điểm người dùng
-            request.user.total_points = F('total_points') + game_session.score
-            request.user.save()
-
-            # Cập nhật thống kê hàng ngày
-            today = timezone.now().date()
-            daily_stats, _ = DailyStats.objects.get_or_create(
-                user=request.user, date=today
+            # Cập nhật điểm người dùng - Sửa cách sử dụng F() expression
+            User.objects.filter(id=request.user.id).update(
+                total_points=F('total_points') + game_session.score
             )
-            daily_stats.games_played = F('games_played') + 1
-            daily_stats.points_earned = F('points_earned') + game_session.score
-            daily_stats.save()
+            # Refresh user instance để có total_points mới
+            request.user.refresh_from_db()
+
+            # Cập nhật thống kê hàng ngày - Sửa cách sử dụng F() expression
+            today = timezone.now().date()
+            daily_stats, created_daily = DailyStats.objects.get_or_create(
+                user=request.user, date=today,
+                defaults={
+                    'cards_studied': 0,
+                    'new_words_learned': 0,
+                    'words_reviewed': 0,
+                    'time_spent': 0,
+                    'games_played': 0,
+                    'points_earned': 0,
+                    'accuracy_rate': 0.0
+                }
+            )
+            
+            if not created_daily:
+                # Nếu record đã tồn tại, cập nhật bằng F() expression
+                DailyStats.objects.filter(
+                    user=request.user, date=today
+                ).update(
+                    games_played=F('games_played') + 1,
+                    points_earned=F('points_earned') + game_session.score
+                )
+            else:
+                # Nếu record mới, cập nhật trực tiếp
+                daily_stats.games_played = 1
+                daily_stats.points_earned = game_session.score
+                daily_stats.save()
+
+            # Cộng thời gian học (đổi giây -> phút, làm tròn lên phút)
+            minutes_spent = int(ceil((game_session.time_spent or 0) / 60))
+            if minutes_spent > 0:
+                DailyStats.objects.filter(user=request.user, date=today).update(
+                    time_spent=F('time_spent') + minutes_spent
+                )
+
+            # Cập nhật accuracy_rate theo trung bình toàn bộ UserProgress
+            agg = UserProgress.objects.filter(user=request.user).aggregate(
+                total_correct=Sum('times_correct'),
+                total_reviewed=Sum('times_reviewed')
+            )
+            total_correct = agg.get('total_correct') or 0
+            total_reviewed = agg.get('total_reviewed') or 0
+            daily_accuracy = round((total_correct / total_reviewed) * 100, 1) if total_reviewed > 0 else 0.0
+
+            DailyStats.objects.filter(user=request.user, date=today).update(
+                accuracy_rate=daily_accuracy
+            )
 
         # Kiểm tra và trao thành tích sau khi chơi game
         new_achievements = AchievementService.check_and_award_achievements(request.user)

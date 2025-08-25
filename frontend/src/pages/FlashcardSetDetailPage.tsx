@@ -18,13 +18,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 
-import { flashcardSetsAPI } from '../services/api';
+import { flashcardSetsAPI, topicsAPI, flashcardsAPI } from '../services/api';
 import { Flashcard } from '../types';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
+import Modal from '../components/common/Modal';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -34,6 +35,23 @@ const FlashcardSetDetailPage: React.FC = () => {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [showAnswers, setShowAnswers] = useState<{ [key: number]: boolean }>({});
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    topic: 0,
+    is_public: false,
+    difficulty: 'beginner'
+  });
+  const [isAddCardOpen, setIsAddCardOpen] = useState(false);
+  const [addCardLoading, setAddCardLoading] = useState(false);
+  const [newCard, setNewCard] = useState({
+    vietnamese: '',
+    english: '',
+    example_sentence_en: '',
+    word_type: 'noun'
+  });
 
   // Fetch flashcard set details
   const {
@@ -49,6 +67,89 @@ const FlashcardSetDetailPage: React.FC = () => {
   });
 
   const set = flashcardSet?.data;
+
+  // Fetch topics for select
+  const { data: topicsData } = useQuery({
+    queryKey: ['topics', { page: 1, page_size: 100 }],
+    queryFn: () => topicsAPI.getAll({ page: 1, page_size: 100 }).then(res => res.data),
+  });
+  const topics = topicsData?.results || [];
+
+  const openEdit = () => {
+    if (!set) return;
+    setForm({
+      title: set.title,
+      description: set.description || '',
+      topic: set.topic.id,
+      is_public: set.is_public,
+      difficulty: set.difficulty as any,
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!set) return;
+    try {
+      setEditLoading(true);
+      await flashcardSetsAPI.update(set.id, {
+        title: form.title,
+        description: form.description,
+        topic: form.topic,
+        is_public: form.is_public,
+        difficulty: form.difficulty,
+      });
+      toast.success('Đã cập nhật bộ flashcard');
+      setIsEditOpen(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['flashcard-set', set.id] }),
+        queryClient.invalidateQueries({ queryKey: ['flashcard-sets'] })
+      ]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Cập nhật thất bại');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  const handleAddCardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!set) return;
+    try {
+      setAddCardLoading(true);
+      await flashcardsAPI.create({
+        flashcard_set: set.id,
+        vietnamese: newCard.vietnamese.trim(),
+        english: newCard.english.trim(),
+        example_sentence_en: newCard.example_sentence_en.trim() || undefined,
+        word_type: newCard.word_type,
+      });
+      toast.success('Đã thêm thẻ');
+      setIsAddCardOpen(false);
+      setNewCard({ vietnamese: '', english: '', example_sentence_en: '', word_type: 'noun' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['flashcard-set', set.id] }),
+        queryClient.invalidateQueries({ queryKey: ['flashcard-sets'] }),
+      ]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Thêm thẻ thất bại');
+    } finally {
+      setAddCardLoading(false);
+    }
+  };
+
+  const handleDeleteFlashcard = async (flashcardId: number) => {
+    if (!set) return;
+    try {
+      await flashcardsAPI.delete(flashcardId);
+      toast.success('Đã xóa thẻ');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['flashcard-set', set.id] }),
+        queryClient.invalidateQueries({ queryKey: ['flashcard-sets'] }),
+      ]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Xóa thẻ thất bại');
+    }
+  };
 
   const handleSaveSet = async () => {
     if (!set) return;
@@ -277,12 +378,14 @@ const FlashcardSetDetailPage: React.FC = () => {
                   <Button
                     variant="outline"
                     leftIcon={<PlusIcon className="h-4 w-4" />}
+                    onClick={() => setIsAddCardOpen(true)}
                   >
                     Thêm thẻ
                   </Button>
                   <Button
                     variant="outline"
                     leftIcon={<PencilIcon className="h-4 w-4" />}
+                    onClick={openEdit}
                   >
                     Chỉnh sửa
                   </Button>
@@ -300,6 +403,128 @@ const FlashcardSetDetailPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* Edit modal */}
+      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Chỉnh sửa bộ flashcard" size="lg">
+        <form className="space-y-4" onSubmit={handleEditSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.title}
+              onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Chủ đề</label>
+              <select
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={form.topic}
+                onChange={(e) => setForm(prev => ({ ...prev, topic: Number(e.target.value) }))}
+              >
+                {topics.map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Độ khó</label>
+              <select
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={form.difficulty}
+                onChange={(e) => setForm(prev => ({ ...prev, difficulty: e.target.value }))}
+              >
+                <option value="beginner">Cơ bản</option>
+                <option value="intermediate">Trung bình</option>
+                <option value="advanced">Nâng cao</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                checked={form.is_public}
+                onChange={(e) => setForm(prev => ({ ...prev, is_public: e.target.checked }))}
+              />
+              <span className="ml-2 text-sm text-gray-700">Công khai</span>
+            </label>
+            <div className="space-x-2">
+              <Button variant="ghost" type="button" onClick={() => setIsEditOpen(false)}>Hủy</Button>
+              <Button type="submit" loading={editLoading}>Lưu thay đổi</Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Flashcard modal */}
+      <Modal isOpen={isAddCardOpen} onClose={() => setIsAddCardOpen(false)} title="Thêm thẻ mới" size="lg">
+        <form className="space-y-4" onSubmit={handleAddCardSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tiếng Việt</label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newCard.vietnamese}
+                onChange={(e) => setNewCard(prev => ({ ...prev, vietnamese: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tiếng Anh</label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newCard.english}
+                onChange={(e) => setNewCard(prev => ({ ...prev, english: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ví dụ (tiếng Anh)</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              value={newCard.example_sentence_en}
+              onChange={(e) => setNewCard(prev => ({ ...prev, example_sentence_en: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Loại từ</label>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={newCard.word_type}
+              onChange={(e) => setNewCard(prev => ({ ...prev, word_type: e.target.value }))}
+            >
+              <option value="noun">Danh từ</option>
+              <option value="verb">Động từ</option>
+              <option value="adjective">Tính từ</option>
+              <option value="adverb">Trạng từ</option>
+              <option value="phrase">Cụm từ</option>
+              <option value="other">Khác</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-end space-x-2">
+            <Button variant="ghost" type="button" onClick={() => setIsAddCardOpen(false)}>Hủy</Button>
+            <Button type="submit" loading={addCardLoading}>Thêm thẻ</Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Flashcards */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -315,7 +540,7 @@ const FlashcardSetDetailPage: React.FC = () => {
             description="Hãy thêm thẻ đầu tiên để bắt đầu học tập"
             action={
               user?.id === set.creator.id ? (
-                <Button leftIcon={<PlusIcon className="h-4 w-4" />}>
+                <Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => setIsAddCardOpen(true)}>
                   Thêm thẻ đầu tiên
                 </Button>
               ) : null
@@ -348,9 +573,22 @@ const FlashcardSetDetailPage: React.FC = () => {
                           </Badge>
                         )}
                       </div>
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <EyeIcon className="h-5 w-5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {user?.id === set.creator.id && (
+                          <button
+                            className="text-red-500 hover:text-red-600 text-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteFlashcard(flashcard.id);
+                            }}
+                          >
+                            Xóa
+                          </button>
+                        )}
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <EyeIcon className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Back side */}

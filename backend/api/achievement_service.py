@@ -48,8 +48,9 @@ class AchievementService:
         
         for achievement in learning_achievements:
             if AchievementService._should_award_achievement(user, achievement):
-                # Chỉ kiểm tra thành tích học từ vựng
-                if 'từ vựng' in achievement.description:
+                # Chỉ kiểm tra thành tích học từ vựng (không phân biệt hoa/thường)
+                desc = (achievement.description or '').lower()
+                if 'từ vựng' in desc:
                     progress_value = new_words_count
                     
                     if progress_value >= achievement.requirement_value:
@@ -74,8 +75,9 @@ class AchievementService:
         
         for achievement in gaming_achievements:
             if AchievementService._should_award_achievement(user, achievement):
-                # Chỉ kiểm tra thành tích số ván game
-                if 'ván game' in achievement.description:
+                # Chỉ kiểm tra thành tích số ván game (không phân biệt hoa/thường)
+                desc = (achievement.description or '').lower()
+                if 'ván game' in desc:
                     progress_value = total_games
                     
                     if progress_value >= achievement.requirement_value:
@@ -123,11 +125,12 @@ class AchievementService:
         for achievement in milestone_achievements:
             if AchievementService._should_award_achievement(user, achievement):
                 progress_value = 0
+                desc = (achievement.description or '').lower()
                 
-                if 'bộ flashcard' in achievement.description:
-                    if 'lưu' in achievement.description:
+                if 'bộ flashcard' in desc:
+                    if 'lưu' in desc:
                         progress_value = saved_sets_count
-                elif 'tài khoản' in achievement.description:
+                elif 'tài khoản' in desc:
                     progress_value = 1  # Đã đăng ký
                 
                 if progress_value >= achievement.requirement_value:
@@ -230,24 +233,27 @@ class AchievementService:
     def _calculate_progress_for_achievement(user, achievement):
         """Tính toán tiến trình hiện tại cho một thành tích"""
         if achievement.achievement_type == 'learning':
-            if 'từ vựng' in achievement.description:
+            desc = (achievement.description or '').lower()
+            if 'từ vựng' in desc:
                 return UserProgress.objects.filter(
                     user=user, 
                     times_reviewed__gte=1
                 ).count()
         
         elif achievement.achievement_type == 'gaming':
-            if 'ván game' in achievement.description:
+            desc = (achievement.description or '').lower()
+            if 'ván game' in desc:
                 return GameSession.objects.filter(user=user).count()
         
         elif achievement.achievement_type == 'streak':
             return AchievementService._calculate_current_streak(user)
         
         elif achievement.achievement_type == 'milestone':
-            if 'bộ flashcard' in achievement.description:
-                if 'lưu' in achievement.description:
+            desc = (achievement.description or '').lower()
+            if 'bộ flashcard' in desc:
+                if 'lưu' in desc:
                     return SavedFlashcardSet.objects.filter(user=user).count()
-            elif 'tài khoản' in achievement.description:
+            elif 'tài khoản' in desc:
                 return 1
         
         return 0

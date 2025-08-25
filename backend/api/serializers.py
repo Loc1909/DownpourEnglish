@@ -280,6 +280,12 @@ class CreateFlashcardSerializer(serializers.ModelSerializer):
                   'example_sentence_en', 'word_type']
 
 
+class UpdateFlashcardSetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlashcardSet
+        fields = ['title', 'description', 'topic', 'is_public', 'difficulty']
+
+
 class StudySummarySerializer(serializers.Serializer):
     """Serializer cho tổng hợp học tập"""
     total_sets_saved = serializers.IntegerField()
