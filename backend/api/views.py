@@ -575,11 +575,9 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             total=Sum('time_spent')
         )['total'] or 0
 
-        # Streak hiện tại (đơn giản)
-        recent_stats = DailyStats.objects.filter(
-            user=user, cards_studied__gt=0
-        ).order_by('-date')[:7]
-        current_streak = len(recent_stats)
+        # Streak hiện tại (sử dụng logic chính xác từ AchievementService)
+        from api.achievement_service import AchievementService
+        current_streak = AchievementService._calculate_current_streak(user)
 
         # Thành tích
         total_achievements = UserAchievement.objects.filter(user=user).count()
