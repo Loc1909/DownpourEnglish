@@ -25,11 +25,11 @@ class UserSerializer(BaseSerializer):
 
     def create(self, validated_data):
         # Lấy password và avatar trước khi tạo user
-        password = validated_data.pop('password', None)
-        avatar = validated_data.pop('avatar', None)
+        password = validated_data.pop('password', None) # dict được check bởi serializer.is_valid()
+        avatar = validated_data.pop('avatar', None) # pop avatar ra, nếu không tồn tại, trả default=None
 
         # Tạo user
-        user = User(**validated_data)
+        user = User(**validated_data) # lấy nguyên dict (**) sau khi pop để tạo user
 
         # Hash và set password nếu có
         if password:
@@ -83,14 +83,14 @@ class UserSerializer(BaseSerializer):
 
 
 class TopicSerializer(serializers.ModelSerializer):
-    flashcard_sets_count = serializers.SerializerMethodField()
+    flashcard_sets_count = serializers.SerializerMethodField() # thêm một field không có trong model nhưng được tính toán động
 
     def get_flashcard_sets_count(self, obj):
         return obj.flashcardset_set.filter(is_public=True).count()
 
     class Meta:
         model = Topic
-        fields = ['id', 'name', 'description', 'icon', 'flashcard_sets_count']
+        fields = ['id', 'name', 'description', 'icon', 'flashcard_sets_count'] # thêm custom field
 
 
 class CreateTopicSerializer(serializers.ModelSerializer):
@@ -204,8 +204,9 @@ class UserProgressSerializer(serializers.ModelSerializer):
 
 
 class GameSessionSerializer(serializers.ModelSerializer):
-    accuracy_percentage = serializers.ReadOnlyField()
+    accuracy_percentage = serializers.ReadOnlyField() # thuộc tính ảo với @property ở model
     game_type_display = serializers.CharField(source='get_game_type_display', read_only=True)
+    # cách đơn giản hơn của SerializerMethodField(), tự tạo hàm get
 
     class Meta:
         model = GameSession

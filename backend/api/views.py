@@ -33,7 +33,7 @@ class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        serializer.is_valid(raise_exception=True) # nếu data valid như serializer không, không: throw...
         topic = serializer.save()
         
         return Response(
@@ -322,7 +322,7 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
             user=request.user, flashcard=flashcard
         )
 
-        with transaction.atomic():
+        with transaction.atomic(): # nếu có ngoại lệ thì hoàn tác tất cả
             # Cập nhật số lần ôn tập và số lần đúng
             progress.times_reviewed += 1
 
