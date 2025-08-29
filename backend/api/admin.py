@@ -13,14 +13,14 @@ from .models import (
 
 # Custom User Admin
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'display_name', 'avatar_display', 'total_points', 'is_staff', 'date_joined')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'date_joined')
+    list_display = ('username', 'email', 'display_name', 'avatar_display', 'total_points', 'role', 'is_staff', 'date_joined')
+    list_filter = ('role', 'is_staff', 'is_superuser', 'is_active', 'date_joined')
     search_fields = ('username', 'email', 'display_name')
     ordering = ('-date_joined',)
 
     fieldsets = BaseUserAdmin.fieldsets + (
         ('Thông tin bổ sung', {
-            'fields': ('display_name', 'avatar', 'avatar_preview', 'total_points')
+            'fields': ('display_name', 'avatar', 'avatar_preview', 'total_points', 'role')
         }),
     )
 

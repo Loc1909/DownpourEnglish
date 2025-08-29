@@ -37,13 +37,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -157,7 +157,8 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_HEADERS = [
+# Allow custom headers including Firebase-Token
+CORS_ALLOW_HEADERS = list([
     'accept',
     'accept-encoding',
     'authorization',
@@ -168,7 +169,7 @@ CORS_ALLOWED_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'firebase-token',  # Custom header for Firebase token
-]
+])
 
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = [

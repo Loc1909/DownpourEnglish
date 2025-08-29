@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import { signInWithGooglePopup } from '../services/firebase';
 
 interface AuthState {
   user: User | null;
@@ -14,6 +15,7 @@ interface AuthState {
   
   // Actions
   login: (username: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (userData: FormData | {
     username: string;
     password: string;
@@ -84,6 +86,39 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginWithGoogle: async () => {
+        try {
+          set({ isLoading: true });
+          const { idToken } = await signInWithGooglePopup();
+
+          // Lưu firebase token để backend xác thực
+          localStorage.setItem('firebaseToken', idToken);
+
+          // Gọi current_user để sync user về store
+          const response = await authAPI.getCurrentUser();
+          const user = response.data;
+
+          set({
+            user,
+            token: localStorage.getItem('authToken'),
+            isAuthenticated: true,
+            isLoading: false,
+          });
+
+          if (queryClient) {
+            await queryClient.clear();
+            queryClient.refetchQueries();
+          }
+
+          toast.success('Đăng nhập Google thành công!');
+        } catch (error: any) {
+          set({ isLoading: false });
+          const errorMessage = error.response?.data?.error || error.message || 'Đăng nhập Google thất bại';
+          toast.error(errorMessage);
+          throw error;
+        }
+      },
+
       register: async (userData) => {
         try {
           set({ isLoading: true });
@@ -149,8 +184,9 @@ export const useAuthStore = create<AuthState>()(
 
       loadUser: async () => {
         const token = localStorage.getItem('authToken');
+        const firebaseToken = localStorage.getItem('firebaseToken');
         
-        if (!token) {
+        if (!token && !firebaseToken) {
           set({ isLoading: false });
           return;
         }

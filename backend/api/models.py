@@ -9,9 +9,15 @@ from django.dispatch import receiver
 
 # Custom User Model
 class User(AbstractUser):
+    ROLE_CHOICES = [
+        ('user', 'User'),
+        ('admin', 'Admin'),
+    ]
+
     display_name = models.CharField(max_length=100, blank=True, verbose_name="Tên hiển thị")
     avatar = CloudinaryField(blank=True, null=True, verbose_name="Avatar")
     total_points = models.IntegerField(default=0, verbose_name="Tổng điểm")
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user', verbose_name="Vai trò")
 
     class Meta:
         verbose_name = "Người dùng"
@@ -19,6 +25,10 @@ class User(AbstractUser):
         indexes = [
             models.Index(fields=['total_points']),
         ]
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
 
 
 # Model cho chủ đề

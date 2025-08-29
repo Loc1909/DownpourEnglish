@@ -9,6 +9,7 @@ export interface User {
   display_name: string;
   avatar: string;
   total_points: number;
+  role: 'user' | 'admin';
   date_joined: string;
 }
 

@@ -114,6 +114,12 @@ export const topicsAPI = {
   }): Promise<AxiosResponse<Topic>> =>
     api.post('/topics/', data),
   
+  update: (id: number, data: Partial<{ name: string; description: string; icon: string }>): Promise<AxiosResponse<Topic>> =>
+    api.patch(`/topics/${id}/`, data),
+
+  delete: (id: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/topics/${id}/`),
+  
   // This returns array, not paginated (custom action)
   getFlashcardSets: (topicId: number): Promise<AxiosResponse<FlashcardSet[]>> =>
     api.get(`/topics/${topicId}/flashcard-sets/`),

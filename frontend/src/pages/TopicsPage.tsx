@@ -111,15 +111,7 @@ const TopicsPage: React.FC = () => {
               Khám phá các chủ đề đa dạng và bắt đầu hành trình học từ vựng tiếng Anh của bạn
             </p>
           </div>
-          <div className="mt-4 sm:mt-0">
-            <Button
-              as={Link}
-              to="/create-topic"
-              leftIcon={<PlusIcon className="h-4 w-4" />}
-            >
-              Tạo chủ đề mới
-            </Button>
-          </div>
+          
         </div>
       </motion.div>
 

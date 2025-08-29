@@ -1,7 +1,7 @@
 // src/pages/HomePage.tsx
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -18,6 +18,13 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const HomePage: React.FC = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Fetch user study summary - returns object directly
   const { data: studySummary, isLoading: summaryLoading } = useQuery({

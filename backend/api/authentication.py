@@ -5,6 +5,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth import get_user_model
 from django.conf import settings
 import os
+from cloudinary import uploader as cloudinary_uploader
 
 User = get_user_model()
 
@@ -42,6 +43,15 @@ class FirebaseAuthentication(BaseAuthentication):
             # Get or create user
             try:
                 user = User.objects.get(username=firebase_uid)
+                # Update avatar from Firebase picture if missing
+                picture_url = decoded_token.get('picture')
+                if picture_url and not getattr(user, 'avatar', None):
+                    try:
+                        upload_result = cloudinary_uploader.upload(picture_url, folder='avatars')
+                        user.avatar = upload_result.get('public_id')
+                        user.save(update_fields=['avatar'])
+                    except Exception:
+                        pass
             except User.DoesNotExist:
                 # Create new user from Firebase data
                 user_data = {
@@ -59,6 +69,16 @@ class FirebaseAuthentication(BaseAuthentication):
                         user_data['last_name'] = name_parts[1]
 
                 user = User.objects.create_user(**user_data)
+
+                # Set avatar from Firebase picture if available
+                picture_url = decoded_token.get('picture')
+                if picture_url:
+                    try:
+                        upload_result = cloudinary_uploader.upload(picture_url, folder='avatars')
+                        user.avatar = upload_result.get('public_id')
+                        user.save(update_fields=['avatar'])
+                    except Exception:
+                        pass
 
             return (user, firebase_token)
 

@@ -26,6 +26,8 @@ import GamePage from './pages/GamePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AchievementsPage from './pages/AchievementsPage';
 import StatsPage from './pages/StatsPage';
+import AdminTopicsPage from './pages/AdminTopicsPage';
+import AdminHomePage from './pages/AdminHomePage';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -85,6 +87,23 @@ function App() {
                       <Route path="/games" element={<GamePage />} />
                       <Route path="/leaderboard" element={<LeaderboardPage />} />
                       <Route path="/achievements" element={<AchievementsPage />} />
+                      {/* Admin routes */}
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute requiredRole="admin">
+                            <AdminHomePage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/topics"
+                        element={
+                          <ProtectedRoute requiredRole="admin">
+                            <AdminTopicsPage />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route path="/stats" element={<StatsPage />} />
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>

@@ -14,21 +14,27 @@ from api.models import (
 )
 from api import serializers
 from api.achievement_service import AchievementService
+class IsAdmin(permissions.BasePermission):
+    """Chỉ cho phép user có role = admin"""
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and getattr(user, 'role', 'user') == 'admin')
 
 
-class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
+
+class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView, generics.DestroyAPIView, generics.RetrieveAPIView):
     queryset = Topic.objects.filter(is_active=True)
     serializer_class = serializers.TopicSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update']:
             return serializers.CreateTopicSerializer
         return super().get_serializer_class()
 
     def get_permissions(self):
-        if self.action == 'create':
-            return [permissions.IsAuthenticated()]
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdmin()]
         return [permissions.AllowAny()]
 
     def create(self, request):

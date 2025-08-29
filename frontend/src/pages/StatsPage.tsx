@@ -13,13 +13,36 @@ import {
   AcademicCapIcon
 } from '@heroicons/react/24/outline';
 import { useQuery } from '@tanstack/react-query';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+// Chart.js
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Tooltip as ChartTooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { statsAPI, userAPI } from '../services/api';
 import { DailyStats, StudySummary } from '../types';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ChartTooltip,
+  Legend,
+  ArcElement
+);
 
 const StatsPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<number>(7);
@@ -52,6 +75,56 @@ const StatsPage: React.FC = () => {
       accuracy: stat.accuracy_rate
     })).reverse();
   }, [dailyStats]);
+
+  // Chart.js datasets
+  const lineData = React.useMemo(() => ({
+    labels: chartData.map(d => d.date),
+    datasets: [
+      {
+        label: 'Thẻ học',
+        data: chartData.map(d => d.cards),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        tension: 0.3,
+        borderWidth: 2,
+        pointRadius: 2,
+      },
+      {
+        label: 'Thời gian (phút)',
+        data: chartData.map(d => d.time),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        tension: 0.3,
+        borderWidth: 2,
+        pointRadius: 2,
+      },
+    ],
+  }), [chartData]);
+
+  const barData = React.useMemo(() => ({
+    labels: chartData.map(d => d.date),
+    datasets: [
+      {
+        label: 'Số game',
+        data: chartData.map(d => d.games),
+        backgroundColor: '#8b5cf6',
+      },
+      {
+        label: 'Điểm số',
+        data: chartData.map(d => d.points),
+        backgroundColor: '#f59e0b',
+      },
+    ],
+  }), [chartData]);
+
+  const lineOptions = React.useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' as const } },
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+  }), []);
+
+  const barOptions = lineOptions;
 
   // Calculate totals
   const totals = React.useMemo(() => {
@@ -189,7 +262,8 @@ const StatsPage: React.FC = () => {
         </Card>
       </motion.div>
 
-      {/* Charts Row */}
+      {/* Charts Row */
+      }
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Learning Progress Chart */}
         <motion.div
@@ -202,28 +276,9 @@ const StatsPage: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">Tiến trình học tập</h3>
               <ChartBarIcon className="h-5 w-5 text-gray-400" />
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="cards" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  name="Thẻ học"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="time" 
-                  stroke="#10b981" 
-                  strokeWidth={2}
-                  name="Thời gian (phút)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300 }}>
+              <Line data={lineData} options={lineOptions} />
+            </div>
           </Card>
         </motion.div>
 
@@ -238,16 +293,9 @@ const StatsPage: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">Hiệu suất game</h3>
               <PuzzlePieceIcon className="h-5 w-5 text-gray-400" />
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="games" fill="#8b5cf6" name="Số game" />
-                <Bar dataKey="points" fill="#f59e0b" name="Điểm số" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300 }}>
+              <Bar data={barData} options={barOptions} />
+            </div>
           </Card>
         </motion.div>
       </div>
@@ -268,23 +316,26 @@ const StatsPage: React.FC = () => {
             </div>
             {masteryData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={masteryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {masteryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ height: 220 }}>
+                  <Doughnut
+                    data={{
+                      labels: masteryData.map((m: any) => m.name),
+                      datasets: [
+                        {
+                          label: 'Số lượng',
+                          data: masteryData.map((m: any) => m.value),
+                          backgroundColor: masteryData.map((m: any) => m.color),
+                          borderWidth: 0,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false } },
+                    }}
+                  />
+                </div>
                 <div className="mt-4 space-y-2">
                   {masteryData.map((entry, index) => (
                     <div key={index} className="flex items-center text-sm">

@@ -60,7 +60,7 @@ const Button: React.FC<ButtonProps> = ({
   // Xử lý props dựa trên Component type
   const componentProps = Component === 'button' 
     ? { 
-        ...props, 
+        ...props, // copy tất cả props còn lại người dùng truyền vào
         disabled: disabled || loading,
         className: finalClassName
       }

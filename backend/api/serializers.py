@@ -74,7 +74,7 @@ class UserSerializer(BaseSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name',
-                  'display_name', 'avatar', 'total_points', 'date_joined', 'password']
+                  'display_name', 'avatar', 'total_points', 'role', 'date_joined', 'password']
         extra_kwargs = {
             'password': {'write_only': True, 'required': True},
             'email': {'required': False},

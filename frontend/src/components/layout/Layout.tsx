@@ -27,7 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
 
-  const navigation = [
+  const userNavigation = [
     { name: 'Trang chủ', href: '/', icon: HomeIcon },
     { name: 'Chủ đề', href: '/topics', icon: BookOpenIcon },
     { name: 'Bộ flashcard', href: '/flashcard-sets', icon: AcademicCapIcon },
@@ -38,6 +38,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Thành tích', href: '/achievements', icon: TrophyIcon },
     { name: 'Thống kê', href: '/stats', icon: ChartBarIcon },
   ];
+
+  const adminNavigation = [
+    { name: 'Trang chủ Admin', href: '/admin', icon: HomeIcon },
+    { name: 'Quản lý chủ đề', href: '/admin/topics', icon: BookOpenIcon },
+    // Tương lai có thể thêm các tab quản trị khác tại đây
+  ];
+
+  const navigation = user?.role === 'admin' ? adminNavigation : userNavigation;
 
   const isActiveRoute = (href: string) => {
     return location.pathname === href;
@@ -171,10 +179,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Profile dropdown */}
           <div className="flex items-center gap-x-4 lg:gap-x-6">
-            {/* Notifications */}
-            <button className="p-2 text-gray-400 hover:text-gray-500">
-              <BellIcon className="h-6 w-6" />
-            </button>
+
 
             {/* User menu */}
             <div className="relative">

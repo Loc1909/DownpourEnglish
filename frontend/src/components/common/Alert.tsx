@@ -62,6 +62,7 @@ const Alert: React.FC<AlertProps> = ({
     }
   };
 
+  // Gán từng biến của config vào từng biến theo thứ tự. Đổi tên icon thành Icon
   const { icon: Icon, bgColor, borderColor, iconColor, titleColor, messageColor } = config[type];
 
   return (
