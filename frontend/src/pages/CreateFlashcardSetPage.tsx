@@ -85,8 +85,13 @@ const CreateFlashcardSetPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['flashcard-sets'] });
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       
-      // Redirect to the new flashcard set
-      navigate('/flashcard-sets');
+      // Redirect to the new flashcard set with "my" view mode if it's private
+      const isPrivate = !isPublic;
+      if (isPrivate) {
+        navigate('/flashcard-sets?view=my');
+      } else {
+        navigate('/flashcard-sets');
+      }
     },
     onError: (error: any) => {
       toast.error('Có lỗi xảy ra khi tạo flashcards');
@@ -376,6 +381,20 @@ const CreateFlashcardSetPage: React.FC = () => {
                 </motion.div>
               ))}
               </AnimatePresence>
+
+              {/* Add Card Button at the bottom */}
+              <div className="flex justify-center pt-4">
+                <Button
+                  type="button"
+                  onClick={addFlashcard}
+                  variant="outline"
+                  size="lg"
+                  leftIcon={<PlusIcon className="h-5 w-5" />}
+                  className="min-w-[200px] border-dashed border-2 border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200"
+                >
+                  Thêm thẻ mới
+                </Button>
+              </div>
             </div>
           </div>
         </Card>

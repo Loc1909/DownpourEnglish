@@ -40,6 +40,7 @@ const FlashcardSetsPage: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
   const [sortBy, setSortBy] = useState('created_at');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'all' | 'my'>('all'); // Thêm view mode
 
   // Ref để giữ focus cho input
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +48,7 @@ const FlashcardSetsPage: React.FC = () => {
   // Debounce search query với delay 300ms
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Đọc topic_id từ URL parameters khi component mount
+  // Đọc topic_id và view từ URL parameters khi component mount
   useEffect(() => {
     const topicIdParam = searchParams.get('topic_id');
     if (topicIdParam) {
@@ -56,6 +57,11 @@ const FlashcardSetsPage: React.FC = () => {
         setSelectedTopic(topicId);
         setShowFilters(true); // Hiển thị filters để user thấy topic đã được chọn
       }
+    }
+
+    const viewParam = searchParams.get('view');
+    if (viewParam === 'my') {
+      setViewMode('my');
     }
   }, [searchParams]);
 
@@ -67,24 +73,26 @@ const FlashcardSetsPage: React.FC = () => {
     if (selectedTopic) newSearchParams.set('topic_id', selectedTopic.toString());
     if (selectedDifficulty) newSearchParams.set('difficulty', selectedDifficulty);
     if (sortBy !== 'created_at') newSearchParams.set('ordering', sortBy);
+    if (viewMode === 'my') newSearchParams.set('view', 'my');
 
     // Chỉ cập nhật URL nếu có thay đổi
     if (newSearchParams.toString() !== searchParams.toString()) {
       setSearchParams(newSearchParams, { replace: true });
     }
-  }, [debouncedSearchQuery, selectedTopic, selectedDifficulty, sortBy, searchParams, setSearchParams]);
+  }, [debouncedSearchQuery, selectedTopic, selectedDifficulty, sortBy, viewMode, searchParams, setSearchParams]);
 
-  // Tạo query key bao gồm cả user ID để đảm bảo data được phân biệt theo user
+  // Tạo query key bao gồm cả user ID và view mode để đảm bảo data được phân biệt theo user
   const createFlashcardSetsQueryKey = () => [
     'flashcard-sets',
     user?.id, // Thêm user ID vào query key
+    viewMode, // Thêm view mode vào query key
     debouncedSearchQuery,
     selectedTopic,
     selectedDifficulty,
     sortBy
   ];
 
-  // Fetch flashcard sets với query key bao gồm user ID
+  // Fetch flashcard sets với query key bao gồm user ID và view mode
   const {
     data: flashcardSetsData,
     isLoading: setsLoading,
@@ -97,6 +105,7 @@ const FlashcardSetsPage: React.FC = () => {
         q: debouncedSearchQuery || undefined,
         topic_id: selectedTopic || undefined,
         difficulty: selectedDifficulty || undefined,
+        creator_id: viewMode === 'my' ? user?.id : undefined, // Thêm creator_id khi xem "Bộ của tôi"
         ordering: sortBy.startsWith('-') ? sortBy : `-${sortBy}`,
       }),
     // Chỉ fetch khi user đã được load
@@ -277,15 +286,17 @@ const FlashcardSetsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Bộ Flashcard
+            {viewMode === 'my' ? 'Bộ Flashcard của tôi' : 'Bộ Flashcard'}
             {currentTopicName && (
               <span className="text-blue-600 ml-2">- {currentTopicName}</span>
             )}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {currentTopicName
-              ? `Khám phá các bộ flashcard về chủ đề ${currentTopicName}`
-              : 'Khám phá và học tập với hàng nghìn bộ flashcard'
+            {viewMode === 'my' 
+              ? 'Quản lý và học tập với các bộ flashcard bạn đã tạo'
+              : currentTopicName
+                ? `Khám phá các bộ flashcard về chủ đề ${currentTopicName}`
+                : 'Khám phá và học tập với hàng nghìn bộ flashcard'
             }
           </p>
         </div>
@@ -298,6 +309,30 @@ const FlashcardSetsPage: React.FC = () => {
             Tạo bộ mới
           </Button>
         </div>
+      </div>
+
+      {/* View Mode Tabs */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
+        <button
+          onClick={() => setViewMode('all')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            viewMode === 'all'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Tất cả
+        </button>
+        <button
+          onClick={() => setViewMode('my')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            viewMode === 'my'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Bộ của tôi
+        </button>
       </div>
 
       {/* Search and Filters */}

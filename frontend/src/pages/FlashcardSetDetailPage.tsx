@@ -392,12 +392,7 @@ const FlashcardSetDetailPage: React.FC = () => {
                 </>
               )}
 
-              <Button
-                variant="outline"
-                leftIcon={<ChartBarIcon className="h-4 w-4" />}
-              >
-                Thống kê
-              </Button>
+
             </div>
           </div>
         </div>

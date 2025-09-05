@@ -14,6 +14,7 @@ from api.models import (
 )
 from api import serializers
 from api.achievement_service import AchievementService
+
 class IsAdmin(permissions.BasePermission):
     """Chỉ cho phép user có role = admin"""
     def has_permission(self, request, view):
@@ -83,7 +84,14 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         return [permissions.AllowAny()]
 
     def get_queryset(self):
-        queryset = self.queryset
+        # Nếu có creator_id filter, cho phép xem cả private sets của creator đó
+        creator_id = self.request.query_params.get('creator_id')
+        if creator_id and self.request.user.is_authenticated and str(self.request.user.id) == str(creator_id):
+            # Người dùng xem bộ flashcard của chính mình -> hiển thị cả public và private
+            queryset = FlashcardSet.objects.select_related('creator', 'topic').all()
+        else:
+            # Mặc định chỉ hiển thị public sets
+            queryset = self.queryset
 
         # Tìm kiếm theo tiêu đề
         q = self.request.query_params.get('q')
@@ -101,11 +109,31 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
             queryset = queryset.filter(difficulty=difficulty)
 
         # Lọc theo người tạo
-        creator_id = self.request.query_params.get('creator_id')
         if creator_id:
             queryset = queryset.filter(creator_id=creator_id)
 
         return queryset
+
+    def get_object(self):
+        """
+        Override get_object để cho phép creator truy cập vào bộ private của mình
+        """
+        # Lấy pk từ URL
+        pk = self.kwargs.get('pk')
+        
+        # Tìm object trong tất cả flashcard sets (bao gồm cả private)
+        try:
+            obj = FlashcardSet.objects.select_related('creator', 'topic').get(pk=pk)
+        except FlashcardSet.DoesNotExist:
+            from django.http import Http404
+            raise Http404("Bộ flashcard không tồn tại")
+        
+        # Kiểm tra quyền truy cập
+        if not obj.is_public and obj.creator != self.request.user:
+            from django.http import Http404
+            raise Http404("Bộ flashcard không tồn tại hoặc bạn không có quyền truy cập")
+        
+        return obj
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data, context={'request': request})

@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { userAPI, flashcardSetsAPI, achievementsAPI } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import AchievementIcon from '../components/common/AchievementIcon';
 
 const HomePage: React.FC = () => {
   const { user } = useAuthStore();
@@ -250,29 +251,27 @@ const HomePage: React.FC = () => {
                         <BookOpenIcon className="h-4 w-4 mr-1" />
                         {set.total_cards} thẻ
                       </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        set.difficulty === 'beginner' 
-                          ? 'bg-green-100 text-green-800'
-                          : set.difficulty === 'intermediate'
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${set.difficulty === 'beginner'
+                        ? 'bg-green-100 text-green-800'
+                        : set.difficulty === 'intermediate'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
-                        {set.difficulty === 'beginner' ? 'Cơ bản' : 
-                         set.difficulty === 'intermediate' ? 'Trung bình' : 'Nâng cao'}
+                        }`}>
+                        {set.difficulty === 'beginner' ? 'Cơ bản' :
+                          set.difficulty === 'intermediate' ? 'Trung bình' : 'Nâng cao'}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center text-yellow-400">
                       {[...Array(5)].map((_, i) => (
                         <svg
                           key={i}
-                          className={`h-4 w-4 ${
-                            i < Math.floor(set.average_rating) ? 'fill-current' : 'fill-gray-200'
-                          }`}
+                          className={`h-4 w-4 ${i < Math.floor(set.average_rating) ? 'fill-current' : 'fill-gray-200'
+                            }`}
                           viewBox="0 0 20 20"
                         >
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -283,7 +282,7 @@ const HomePage: React.FC = () => {
                       ({set.total_saves} lượt lưu)
                     </span>
                   </div>
-                  
+
                   <Link
                     to={`/flashcard-sets/${set.id}`}
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
@@ -323,14 +322,18 @@ const HomePage: React.FC = () => {
                   className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
                 >
                   <div className="flex items-center mb-4">
-                    <div className={`p-3 rounded-lg ${
-                      userAchievement.achievement.rarity === 'legendary' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
+                    <div className={`p-3 rounded-lg ${userAchievement.achievement.rarity === 'legendary' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
                       userAchievement.achievement.rarity === 'epic' ? 'bg-gradient-to-r from-purple-400 to-blue-400' :
-                      userAchievement.achievement.rarity === 'rare' ? 'bg-gradient-to-r from-blue-400 to-cyan-400' :
-                      userAchievement.achievement.rarity === 'uncommon' ? 'bg-gradient-to-r from-green-400 to-blue-400' :
-                      'bg-gray-100'
-                    }`}>
-                      <span className="text-2xl">{userAchievement.achievement.icon}</span>
+                        userAchievement.achievement.rarity === 'rare' ? 'bg-gradient-to-r from-blue-400 to-cyan-400' :
+                          userAchievement.achievement.rarity === 'uncommon' ? 'bg-gradient-to-r from-green-400 to-blue-400' :
+                            'bg-gray-100'
+                      }`}>
+                      <AchievementIcon
+                        iconName={userAchievement.achievement.icon}
+                        rarity={userAchievement.achievement.rarity}
+                        size="h-8 w-8"
+                        useRarityColor={false} // Không dùng màu độ hiếm, sử dụng text-white
+                      />
                     </div>
                     <div className="ml-4 flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">
@@ -341,15 +344,14 @@ const HomePage: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      userAchievement.achievement.rarity === 'legendary' ? 'bg-purple-100 text-purple-800' :
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${userAchievement.achievement.rarity === 'legendary' ? 'bg-purple-100 text-purple-800' :
                       userAchievement.achievement.rarity === 'epic' ? 'bg-indigo-100 text-indigo-800' :
-                      userAchievement.achievement.rarity === 'rare' ? 'bg-blue-100 text-blue-800' :
-                      userAchievement.achievement.rarity === 'uncommon' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                        userAchievement.achievement.rarity === 'rare' ? 'bg-blue-100 text-blue-800' :
+                          userAchievement.achievement.rarity === 'uncommon' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                      }`}>
                       {userAchievement.achievement.rarity_display}
                     </span>
                     <span className="text-sm font-medium text-orange-600">
@@ -374,7 +376,7 @@ const HomePage: React.FC = () => {
           💪 Hãy duy trì động lực học tập!
         </h3>
         <p className="text-green-100 mb-6 max-w-2xl mx-auto">
-          Học từ vựng mỗi ngày chỉ 15 phút sẽ giúp bạn cải thiện đáng kể khả năng tiếng Anh. 
+          Học từ vựng mỗi ngày chỉ 15 phút sẽ giúp bạn cải thiện đáng kể khả năng tiếng Anh.
           Hãy bắt đầu ngay hôm nay!
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

@@ -1,4 +1,4 @@
-// src/pages/StudyPage.tsx - Fixed version
+// src/pages/StudyPage.tsx - Version with completion screen
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -14,6 +14,10 @@ import {
   HeartIcon,
   StarIcon,
   BookmarkIcon,
+  TrophyIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
 import { 
   BookmarkIcon as BookmarkSolidIcon,
@@ -35,6 +39,8 @@ interface StudySession {
   completedCards: number[];
   correctAnswers: number;
   totalReviewed: number;
+  isCompleted: boolean;
+  sessionStartTime: Date;
 }
 
 const StudyPage: React.FC = () => {
@@ -49,6 +55,8 @@ const StudyPage: React.FC = () => {
     completedCards: [],
     correctAnswers: 0,
     totalReviewed: 0,
+    isCompleted: false,
+    sessionStartTime: new Date(),
   });
 
   const [studyMode, setStudyMode] = useState<'all' | 'difficult' | 'new'>('all');
@@ -72,7 +80,6 @@ const StudyPage: React.FC = () => {
     mutationFn: (data: { id: number; is_correct: boolean; difficulty_rating?: number }) =>
       flashcardsAPI.study(data.id, { is_correct: data.is_correct, difficulty_rating: data.difficulty_rating }),
     onSuccess: (data) => {
-      toast.success('Đã cập nhật tiến trình học tập!');
       queryClient.invalidateQueries({ queryKey: ['progress'] });
     },
   });
@@ -110,6 +117,7 @@ const StudyPage: React.FC = () => {
         ...prev,
         flashcards: setData.flashcards!,
         currentIndex: 0,
+        sessionStartTime: new Date(),
       }));
       setSelectedSet(setData);
     }
@@ -169,7 +177,7 @@ const StudyPage: React.FC = () => {
       }));
     } else {
       // Study session completed
-      showCompletionSummary();
+      setSession(prev => ({ ...prev, isCompleted: true }));
     }
   };
 
@@ -187,19 +195,199 @@ const StudyPage: React.FC = () => {
     setSession(prev => ({ ...prev, showAnswer: !prev.showAnswer }));
   };
 
-  const showCompletionSummary = () => {
-    const accuracy = session.totalReviewed > 0 
-      ? Math.round((session.correctAnswers / session.totalReviewed) * 100) 
-      : 0;
-
-    toast.success(
-      `Hoàn thành! Độ chính xác: ${accuracy}% (${session.correctAnswers}/${session.totalReviewed})`,
-      { duration: 5000 }
-    );
+  const handleRestart = () => {
+    setSession(prev => ({
+      ...prev,
+      currentIndex: 0,
+      showAnswer: false,
+      completedCards: [],
+      correctAnswers: 0,
+      totalReviewed: 0,
+      isCompleted: false,
+      sessionStartTime: new Date(),
+    }));
   };
 
   const handleSetSelect = (set: FlashcardSet) => {
     navigate(`/study/${set.id}`);
+  };
+
+  // Calculate session statistics
+  const getSessionStats = () => {
+    const accuracy = session.totalReviewed > 0 
+      ? Math.round((session.correctAnswers / session.totalReviewed) * 100) 
+      : 0;
+    
+    const sessionDuration = Math.round((new Date().getTime() - session.sessionStartTime.getTime()) / 1000 / 60);
+    
+    return { accuracy, sessionDuration };
+  };
+
+  // Completion Screen Component
+  const CompletionScreen = () => {
+    const { accuracy, sessionDuration } = getSessionStats();
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-2xl mx-auto text-center"
+      >
+        <Card className="p-8">
+          {/* Trophy Icon */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="mb-6"
+          >
+            <div className="w-20 h-20 mx-auto bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+              <TrophyIcon className="h-10 w-10 text-white" />
+            </div>
+          </motion.div>
+
+          {/* Title */}
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-3xl font-bold text-gray-900 mb-4"
+          >
+            🎉 Chúc mừng!
+          </motion.h1>
+
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-lg text-gray-600 mb-8"
+          >
+            Bạn đã hoàn thành bộ flashcard "{selectedSet?.title}"
+          </motion.p>
+
+          {/* Statistics */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
+          >
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-1">
+                {session.flashcards.length}
+              </div>
+              <div className="text-sm text-gray-500">Tổng thẻ</div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-1">
+                {session.correctAnswers}
+              </div>
+              <div className="text-sm text-gray-500">Đúng</div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-1">
+                {accuracy}%
+              </div>
+              <div className="text-sm text-gray-500">Độ chính xác</div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600 mb-1">
+                {sessionDuration}
+              </div>
+              <div className="text-sm text-gray-500">Phút</div>
+            </div>
+          </motion.div>
+
+          {/* Performance Feedback */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mb-8"
+          >
+            {accuracy >= 90 ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-center mb-2">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600 mr-2" />
+                  <span className="text-green-800 font-semibold">Xuất sắc!</span>
+                </div>
+                <p className="text-green-700">
+                  Bạn đã nắm vững rất tốt các từ vựng trong bộ này!
+                </p>
+              </div>
+            ) : accuracy >= 70 ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-center mb-2">
+                  <CheckCircleIcon className="h-6 w-6 text-blue-600 mr-2" />
+                  <span className="text-blue-800 font-semibold">Tốt lắm!</span>
+                </div>
+                <p className="text-blue-700">
+                  Bạn đã làm tốt! Hãy tiếp tục luyện tập để cải thiện hơn nữa.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-center justify-center mb-2">
+                  <XCircleIcon className="h-6 w-6 text-orange-600 mr-2" />
+                  <span className="text-orange-800 font-semibold">Cần cải thiện</span>
+                </div>
+                <p className="text-orange-700">
+                  Đừng lo! Hãy thử lại một lần nữa để ghi nhớ tốt hơn.
+                </p>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Action Buttons */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <Button
+              variant="outline"
+              onClick={handleRestart}
+              leftIcon={<ArrowPathIcon className="h-5 w-5" />}
+            >
+              Học lại
+            </Button>
+
+            <Button
+              variant="primary"
+              onClick={() => navigate('/study')}
+            >
+              Chọn bộ khác
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/flashcard-sets/${selectedSet?.id}`)}
+            >
+              Xem chi tiết bộ thẻ
+            </Button>
+          </motion.div>
+
+          {/* Share Achievement */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="mt-8 pt-6 border-t border-gray-200"
+          >
+            <p className="text-sm text-gray-500 mb-4">
+              Chia sẻ thành tích của bạn:
+            </p>
+            <div className="text-lg font-medium text-gray-700">
+              "Tôi vừa hoàn thành bộ flashcard '{selectedSet?.title}' với độ chính xác {accuracy}%! 🎯"
+            </div>
+          </motion.div>
+        </Card>
+      </motion.div>
+    );
   };
 
   if (!setId) {
@@ -339,7 +527,7 @@ const StudyPage: React.FC = () => {
     );
   }
 
-  if (!currentCard) {
+  if (!currentCard && !session.isCompleted) {
     return (
       <EmptyState
         title="Không có flashcard nào"
@@ -351,6 +539,11 @@ const StudyPage: React.FC = () => {
         }
       />
     );
+  }
+
+  // Show completion screen
+  if (session.isCompleted) {
+    return <CompletionScreen />;
   }
 
   return (
