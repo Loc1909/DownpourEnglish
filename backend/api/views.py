@@ -14,13 +14,7 @@ from api.models import (
 )
 from api import serializers
 from api.achievement_service import AchievementService
-
-class IsAdmin(permissions.BasePermission):
-    """Chỉ cho phép user có role = admin"""
-    def has_permission(self, request, view):
-        user = request.user
-        return bool(user and user.is_authenticated and getattr(user, 'role', 'user') == 'admin')
-
+from api.permissions import IsUser, IsAdmin
 
 
 class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView, generics.DestroyAPIView, generics.RetrieveAPIView):
@@ -79,8 +73,10 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         return super().get_serializer_class()
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAuthenticated()]
+        # Các thao tác mang tính người dùng (không phải admin)
+        user_actions = ['create', 'update', 'partial_update', 'destroy', 'save', 'favorite', 'rate']
+        if self.action in user_actions:
+            return [IsUser()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):
@@ -161,7 +157,7 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         return Response(detail.data)
 
     # views.py - Fixed save action
-    @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
+    @action(methods=['post'], detail=True, permission_classes=[IsUser])
     def save(self, request, pk):
         """Lưu/hủy lưu bộ flashcard"""
         flashcard_set = self.get_object()
@@ -212,7 +208,7 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         
         return Response(response_data)
 
-    @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
+    @action(methods=['post'], detail=True, permission_classes=[IsUser])
     def rate(self, request, pk):
         """Đánh giá bộ flashcard"""
         flashcard_set = self.get_object()
@@ -270,7 +266,7 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         )
         return Response(serializer.data)
 
-    @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
+    @action(methods=['post'], detail=True, permission_classes=[IsUser])
     def favorite(self, request, pk):
         """Thêm/bỏ yêu thích bộ flashcard"""
         flashcard_set = self.get_object()
@@ -308,7 +304,7 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
             'total_saves': flashcard_set.total_saves
         })
 
-    @action(methods=['get'], detail=False, permission_classes=[permissions.IsAuthenticated])
+    @action(methods=['get'], detail=False, permission_classes=[IsUser])
     def favorites(self, request):
         """Lấy danh sách bộ flashcard yêu thích"""
         favorites = SavedFlashcardSet.objects.filter(
@@ -325,7 +321,11 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
 class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.UpdateAPIView, generics.DestroyAPIView):
     queryset = Flashcard.objects.all()
     serializer_class = serializers.FlashcardSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'study']:
+            return [IsUser()]
+        return [permissions.AllowAny()]
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -449,7 +449,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     def get_permissions(self):
         if self.action in ['current_user', 'study_summary', 'saved_sets']:
-            return [permissions.IsAuthenticated()]
+            return [IsUser()]
         elif self.action == 'create':
             return [permissions.AllowAny()]  # Cho phép đăng ký không cần auth
         return [permissions.AllowAny()]
@@ -644,7 +644,12 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView):
     queryset = GameSession.objects.all()
     serializer_class = serializers.GameSessionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        # Tạo session game là hành động của người dùng (role=user)
+        if self.action in ['create', 'list']:
+            return [IsUser()]
+        return [permissions.AllowAny()]
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
