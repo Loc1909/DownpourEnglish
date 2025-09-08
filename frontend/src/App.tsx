@@ -28,6 +28,8 @@ import AchievementsPage from './pages/AchievementsPage';
 import StatsPage from './pages/StatsPage';
 import AdminTopicsPage from './pages/AdminTopicsPage';
 import AdminHomePage from './pages/AdminHomePage';
+import AdminFlashcardSetsPage from './pages/AdminFlashcardSetsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -101,6 +103,22 @@ function App() {
                         element={
                           <ProtectedRoute requiredRole="admin">
                             <AdminTopicsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/flashcard-sets"
+                        element={
+                          <ProtectedRoute requiredRole="admin">
+                            <AdminFlashcardSetsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/users"
+                        element={
+                          <ProtectedRoute requiredRole="admin">
+                            <AdminUsersPage />
                           </ProtectedRoute>
                         }
                       />

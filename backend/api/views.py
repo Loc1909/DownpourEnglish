@@ -17,7 +17,8 @@ from api.achievement_service import AchievementService
 from api.permissions import IsUser, IsAdmin
 
 
-class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView, generics.DestroyAPIView, generics.RetrieveAPIView):
+class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView,
+                   generics.DestroyAPIView, generics.RetrieveAPIView):
     queryset = Topic.objects.filter(is_active=True)
     serializer_class = serializers.TopicSerializer
     permission_classes = [permissions.AllowAny]
@@ -34,9 +35,9 @@ class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True) # nếu data valid như serializer không, không: throw...
+        serializer.is_valid(raise_exception=True)  # nếu data valid như serializer không, không: throw...
         topic = serializer.save()
-        
+
         return Response(
             serializers.TopicSerializer(topic).data,
             status=status.HTTP_201_CREATED
@@ -56,12 +57,13 @@ class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
         return Response(serializer.data)
 
 
-class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.UpdateAPIView):
+class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.UpdateAPIView,
+                          generics.DestroyAPIView):
     queryset = FlashcardSet.objects.select_related('creator', 'topic').filter(is_public=True)
     serializer_class = serializers.FlashcardSetSerializer
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['created_at', 'total_saves', 'average_rating'] # Các field có thể sort
-    ordering = ['-created_at'] # Xếp giảm dần
+    ordering_fields = ['created_at', 'total_saves', 'average_rating']  # Các field có thể sort
+    ordering = ['-created_at']  # Xếp giảm dần
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -73,10 +75,17 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         return super().get_serializer_class()
 
     def get_permissions(self):
-        # Các thao tác mang tính người dùng (không phải admin)
-        user_actions = ['create', 'update', 'partial_update', 'destroy', 'save', 'favorite', 'rate']
-        if self.action in user_actions:
+        # Hành động chỉ dành cho user (tương tác cá nhân)
+        user_only_actions = ['save', 'favorite', 'rate', 'favorites']
+        if self.action in user_only_actions:
             return [IsUser()]
+        # Hành động quản trị
+        if self.action in ['admin_list']:
+            return [IsAdmin()]
+        # Tạo/sửa/xóa: cho phép cả admin và user đăng nhập
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated()]
+        # Mặc định public
         return [permissions.AllowAny()]
 
     def get_queryset(self):
@@ -116,19 +125,20 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         """
         # Lấy pk từ URL
         pk = self.kwargs.get('pk')
-        
+
         # Tìm object trong tất cả flashcard sets (bao gồm cả private)
         try:
             obj = FlashcardSet.objects.select_related('creator', 'topic').get(pk=pk)
         except FlashcardSet.DoesNotExist:
             from django.http import Http404
             raise Http404("Bộ flashcard không tồn tại")
-        
-        # Kiểm tra quyền truy cập
-        if not obj.is_public and obj.creator != self.request.user:
+
+        # Kiểm tra quyền truy cập (admin luôn được phép)
+        if not obj.is_public and obj.creator != self.request.user and getattr(self.request.user, 'role',
+                                                                              'user') != 'admin':
             from django.http import Http404
             raise Http404("Bộ flashcard không tồn tại hoặc bạn không có quyền truy cập")
-        
+
         return obj
 
     def create(self, request):
@@ -143,9 +153,10 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Chỉ cho phép creator chỉnh sửa
-        if instance.creator != request.user:
-            return Response({'error': 'Bạn không có quyền chỉnh sửa bộ flashcard này'}, status=status.HTTP_403_FORBIDDEN)
+        # Cho phép creator hoặc admin chỉnh sửa
+        if instance.creator != request.user and getattr(request.user, 'role', 'user') != 'admin':
+            return Response({'error': 'Bạn không có quyền chỉnh sửa bộ flashcard này'},
+                            status=status.HTTP_403_FORBIDDEN)
 
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -155,6 +166,41 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
         # Trả về dữ liệu chi tiết sau khi cập nhật
         detail = serializers.FlashcardSetDetailSerializer(instance, context={'request': request})
         return Response(detail.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Chỉ cho phép creator xóa
+        if instance.creator != request.user and getattr(request.user, 'role', 'user') != 'admin':
+            return Response({'error': 'Bạn không có quyền xóa bộ flashcard này'}, status=status.HTTP_403_FORBIDDEN)
+
+        instance.delete()
+        return Response({'message': 'Đã xóa bộ flashcard'}, status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['get'], detail=False)
+    def admin_list(self, request):
+        """Danh sách tất cả flashcard set (chỉ admin)"""
+        if getattr(request.user, 'role', 'user') != 'admin':
+            return Response({'error': 'Không có quyền'}, status=status.HTTP_403_FORBIDDEN)
+
+        queryset = FlashcardSet.objects.select_related('creator', 'topic').all()
+
+        # Filter
+        q = request.query_params.get('q')
+        if q:
+            queryset = queryset.filter(title__icontains=q)
+        topic_id = request.query_params.get('topic_id')
+        if topic_id:
+            queryset = queryset.filter(topic_id=topic_id)
+        creator_id = request.query_params.get('creator_id')
+        if creator_id:
+            queryset = queryset.filter(creator_id=creator_id)
+        is_public = request.query_params.get('is_public')
+        if is_public in ['true', 'false', '0', '1']:
+            value = is_public in ['true', '1']
+            queryset = queryset.filter(is_public=value)
+
+        serializer = serializers.FlashcardSetSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
     # views.py - Fixed save action
     @action(methods=['post'], detail=True, permission_classes=[IsUser])
@@ -188,13 +234,13 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
 
         # Kiểm tra và trao thành tích sau khi lưu flashcard
         new_achievements = AchievementService.check_and_award_achievements(request.user)
-        
+
         response_data = {
             'message': message,
             'is_saved': is_saved,
             'total_saves': flashcard_set.total_saves
         }
-        
+
         if new_achievements:
             response_data['new_achievements'] = [
                 {
@@ -205,7 +251,7 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
                 }
                 for achievement in new_achievements
             ]
-        
+
         return Response(response_data)
 
     @action(methods=['post'], detail=True, permission_classes=[IsUser])
@@ -236,12 +282,12 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
 
         # Kiểm tra và trao thành tích sau khi đánh giá
         new_achievements = AchievementService.check_and_award_achievements(request.user)
-        
+
         response_data = {
             'message': 'Đã đánh giá thành công',
             'average_rating': flashcard_set.average_rating
         }
-        
+
         if new_achievements:
             response_data['new_achievements'] = [
                 {
@@ -252,7 +298,7 @@ class FlashcardSetViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retri
                 }
                 for achievement in new_achievements
             ]
-        
+
         return Response(response_data)
 
     @action(methods=['get'], detail=True, url_path='flashcards')
@@ -323,14 +369,17 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
     serializer_class = serializers.FlashcardSerializer
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'study']:
-            return [IsUser()]
+        # Cho phép cả user và admin tạo, sửa, xóa flashcard
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated()]  # Thay đổi từ IsUser() thành IsAuthenticated()
+        elif self.action == 'study':
+            return [IsUser()]  # Study chỉ dành cho user thường
         return [permissions.AllowAny()]
 
     def get_serializer_class(self):
         if self.action == 'create':
             return serializers.CreateFlashcardSerializer
-        return super().get_serializer_class()
+        return super().get_serializepr_class()
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -345,7 +394,7 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
             status=status.HTTP_201_CREATED
         )
 
-    @action(methods=['post'], detail=True, permission_classes=[permissions.IsAuthenticated])
+    @action(methods=['post'], detail=True, permission_classes=[IsUser])
     def study(self, request, pk):
         """Học một flashcard"""
         flashcard = self.get_object()
@@ -356,7 +405,7 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
             user=request.user, flashcard=flashcard
         )
 
-        with transaction.atomic(): # nếu có ngoại lệ thì hoàn tác tất cả
+        with transaction.atomic():  # nếu có ngoại lệ thì hoàn tác tất cả
             # Cập nhật số lần ôn tập và số lần đúng
             progress.times_reviewed += 1
 
@@ -389,7 +438,7 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
                     'accuracy_rate': 0.0
                 }
             )
-            
+
             if not created_daily:
                 # Nếu record đã tồn tại, cập nhật bằng F() expression
                 DailyStats.objects.filter(
@@ -421,13 +470,13 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
 
         # Kiểm tra và trao thành tích sau khi học
         new_achievements = AchievementService.check_and_award_achievements(request.user)
-        
+
         response_data = {
             'message': 'Đã cập nhật tiến trình học tập',
             'mastery_level': progress.mastery_level,
             'times_reviewed': progress.times_reviewed
         }
-        
+
         if new_achievements:
             response_data['new_achievements'] = [
                 {
@@ -438,7 +487,7 @@ class FlashcardViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Update
                 }
                 for achievement in new_achievements
             ]
-        
+
         return Response(response_data)
 
 
@@ -448,7 +497,11 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_permissions(self):
-        if self.action in ['current_user', 'study_summary', 'saved_sets']:
+        # Các API hồ sơ chung cho mọi role đã đăng nhập
+        if self.action in ['current_user', 'upload_avatar', 'logout']:
+            return [permissions.IsAuthenticated()]
+        # Các API thống kê/học tập chỉ dành cho role user
+        if self.action in ['study_summary', 'saved_sets']:
             return [IsUser()]
         elif self.action == 'create':
             return [permissions.AllowAny()]  # Cho phép đăng ký không cần auth
@@ -477,7 +530,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
                     'token': token.key,
                     'user': serializers.UserSerializer(user).data
                 }
-                
+
                 if registration_achievement:
                     response_data['new_achievement'] = {
                         'name': registration_achievement.name,
@@ -594,6 +647,29 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         return Response(serializers.UserSerializer(user).data)
 
+    # Admin: danh sách user
+    @action(methods=['get'], detail=False, permission_classes=[IsAdmin])
+    def admin_list(self, request):
+        users = User.objects.all().order_by('-date_joined')
+        serializer = serializers.UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+    # Admin: cập nhật vai trò user
+    @action(methods=['patch'], detail=True, permission_classes=[IsAdmin])
+    def admin_update_role(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'User không tồn tại'}, status=status.HTTP_404_NOT_FOUND)
+
+        role = request.data.get('role')
+        if role not in ['user', 'admin']:
+            return Response({'error': 'Role không hợp lệ'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.role = role
+        user.save(update_fields=['role'])
+        return Response({'message': 'Đã cập nhật vai trò', 'user': serializers.UserSerializer(user).data})
+
     @action(methods=['get'], detail=False, permission_classes=[permissions.IsAuthenticated])
     def study_summary(self, request):
         """Tổng kết học tập của user"""
@@ -682,7 +758,7 @@ class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.List
                     'accuracy_rate': 0.0
                 }
             )
-            
+
             if not created_daily:
                 # Nếu record đã tồn tại, cập nhật bằng F() expression
                 DailyStats.objects.filter(
@@ -719,7 +795,7 @@ class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.List
 
         # Kiểm tra và trao thành tích sau khi chơi game
         new_achievements = AchievementService.check_and_award_achievements(request.user)
-        
+
         response_data = {
             'game_session': serializer.data,
             'new_achievements': [
@@ -732,7 +808,7 @@ class GameSessionViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.List
                 for achievement in new_achievements
             ] if new_achievements else []
         }
-        
+
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     @action(methods=['get'], detail=False)
@@ -814,14 +890,14 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
-        
+
         # Nếu user đã đăng nhập, thêm thông tin tiến trình
         if request.user.is_authenticated:
             # Lấy tất cả thành tích đã đạt được của user để tối ưu performance
             user_achievements = UserAchievement.objects.filter(
                 user=request.user
             ).values_list('achievement_id', flat=True)
-            
+
             for achievement_data in data:
                 achievement_id = achievement_data['id']
                 try:
@@ -830,12 +906,12 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
                         request.user, achievement
                     )
                     achievement_data['user_progress'] = progress_value
-                    
+
                     # Kiểm tra xem user đã đạt được thành tích này chưa
                     if achievement_id in user_achievements:
                         # User đã đạt được thành tích này
                         user_achievement = UserAchievement.objects.get(
-                            user=request.user, 
+                            user=request.user,
                             achievement=achievement
                         )
                         achievement_data['is_earned'] = True
@@ -851,10 +927,10 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
                         else:
                             progress_percentage = 0
                         achievement_data['progress_percentage'] = round(progress_percentage, 1)
-                        
+
                 except Achievement.DoesNotExist:
                     pass
-        
+
         return Response(data)
 
     @action(methods=['get'], detail=False, permission_classes=[permissions.IsAuthenticated])
@@ -866,12 +942,12 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         serializer = serializers.UserAchievementSerializer(user_achievements, many=True)
         return Response(serializer.data)
-    
+
     @action(methods=['post'], detail=False, permission_classes=[permissions.IsAuthenticated])
     def check_achievements(self, request):
         """Kiểm tra và trao thành tích mới cho user"""
         new_achievements = AchievementService.check_and_award_achievements(request.user)
-        
+
         if new_achievements:
             return Response({
                 'message': f'Đã đạt được {len(new_achievements)} thành tích mới!',

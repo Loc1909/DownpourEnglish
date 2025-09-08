@@ -141,6 +141,15 @@ export const flashcardSetsAPI = {
   getById: (id: number): Promise<AxiosResponse<FlashcardSet>> =>
     api.get(`/flashcard-sets/${id}/`),
   
+  // Admin: list all sets (with filters)
+  adminList: (params?: {
+    q?: string;
+    topic_id?: number;
+    creator_id?: number;
+    is_public?: boolean;
+  }): Promise<AxiosResponse<FlashcardSet[]>> =>
+    api.get('/flashcard-sets/admin_list/', { params }),
+  
   create: (data: {
     title: string;
     description: string;
@@ -158,6 +167,9 @@ export const flashcardSetsAPI = {
     difficulty: string;
   }>): Promise<AxiosResponse<FlashcardSet>> =>
     api.patch(`/flashcard-sets/${id}/`, data),
+  
+  delete: (id: number): Promise<AxiosResponse<void>> =>
+    api.delete(`/flashcard-sets/${id}/`),
   
   save: (id: number): Promise<AxiosResponse<{
     message: string;
@@ -226,6 +238,14 @@ export const userAPI = {
   // This returns array, not paginated (custom action)
   getSavedSets: (): Promise<AxiosResponse<SavedFlashcardSet[]>> =>
     api.get('/users/saved_sets/'),
+  
+  // Admin: list users
+  adminList: (): Promise<AxiosResponse<User[]>> =>
+    api.get('/users/admin_list/'),
+  
+  // Admin: update user role
+  adminUpdateRole: (id: number, role: 'user' | 'admin'): Promise<AxiosResponse<{ message: string; user: User }>> =>
+    api.patch(`/users/${id}/admin_update_role/`, { role }),
 };
 
 // Progress API - Uses pagination

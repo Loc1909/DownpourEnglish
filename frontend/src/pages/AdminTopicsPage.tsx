@@ -88,7 +88,7 @@ const AdminTopicsPage: React.FC = () => {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Quản lý chủ đề</h1>
+        <h1 className="text-2xl font-bold">Quản lý chủ đề</h1>
         <Button onClick={openCreate}>Tạo chủ đề</Button>
       </div>
 

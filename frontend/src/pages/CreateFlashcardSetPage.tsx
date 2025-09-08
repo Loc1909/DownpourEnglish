@@ -85,13 +85,15 @@ const CreateFlashcardSetPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['flashcard-sets'] });
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       
+      // Redirect theo role
+      if (user?.role === 'admin') {
+        navigate('/admin/flashcard-sets');
+        return;
+      }
+
       // Redirect to the new flashcard set with "my" view mode if it's private
       const isPrivate = !isPublic;
-      if (isPrivate) {
-        navigate('/flashcard-sets?view=my');
-      } else {
-        navigate('/flashcard-sets');
-      }
+      navigate(isPrivate ? '/flashcard-sets?view=my' : '/flashcard-sets');
     },
     onError: (error: any) => {
       toast.error('Có lỗi xảy ra khi tạo flashcards');

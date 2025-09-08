@@ -87,6 +87,23 @@ const FlashcardSetDetailPage: React.FC = () => {
     setIsEditOpen(true);
   };
 
+  const handleDeleteSet = async () => {
+    if (!set) return;
+    const confirm = window.confirm('Bạn có chắc chắn muốn xóa bộ flashcard này? Hành động này không thể hoàn tác.');
+    if (!confirm) return;
+    try {
+      await flashcardSetsAPI.delete(set.id);
+      toast.success('Đã xóa bộ flashcard');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['flashcard-sets'] }),
+        queryClient.invalidateQueries({ queryKey: ['topics'] }),
+      ]);
+      navigate('/flashcard-sets?view=my');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Xóa bộ thất bại');
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!set) return;
@@ -153,11 +170,11 @@ const FlashcardSetDetailPage: React.FC = () => {
 
   const handleSaveSet = async () => {
     if (!set) return;
-    
+
     try {
       const response = await flashcardSetsAPI.save(set.id);
       toast.success(response.data.message);
-      
+
       // Invalidate cả detail và list queries để đồng bộ dữ liệu
       await Promise.all([
         queryClient.invalidateQueries({
@@ -174,11 +191,11 @@ const FlashcardSetDetailPage: React.FC = () => {
 
   const handleRateSet = async (rating: number) => {
     if (!set) return;
-    
+
     try {
       const response = await flashcardSetsAPI.rate(set.id, rating);
       toast.success(response.data.message);
-      
+
       // Invalidate cả detail và list queries để đồng bộ dữ liệu
       await Promise.all([
         queryClient.invalidateQueries({
@@ -362,6 +379,7 @@ const FlashcardSetDetailPage: React.FC = () => {
               )}
             </div>
 
+
             {/* Actions */}
             <div className="flex flex-wrap gap-3">
               <Button
@@ -372,7 +390,7 @@ const FlashcardSetDetailPage: React.FC = () => {
               >
                 Bắt đầu học
               </Button>
-              
+
               {user?.id === set.creator.id && (
                 <>
                   <Button
@@ -388,6 +406,9 @@ const FlashcardSetDetailPage: React.FC = () => {
                     onClick={openEdit}
                   >
                     Chỉnh sửa
+                  </Button>
+                  <Button variant="danger" onClick={handleDeleteSet}>
+                    Xóa bộ
                   </Button>
                 </>
               )}
@@ -602,7 +623,7 @@ const FlashcardSetDetailPage: React.FC = () => {
                             <strong>Ví dụ:</strong> {flashcard.example_sentence_en}
                           </div>
                         )}
-                        
+
                         {/* Progress indicator */}
                         {flashcard.user_progress && (
                           <div className="flex items-center space-x-2 text-xs text-gray-500">

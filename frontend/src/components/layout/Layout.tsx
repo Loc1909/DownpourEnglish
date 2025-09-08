@@ -7,7 +7,7 @@ import {
   HomeIcon,
   BookOpenIcon,
   AcademicCapIcon,
-  //UserIcon,
+  UserIcon,
   TrophyIcon,
   ChartBarIcon,
   PuzzlePieceIcon,
@@ -42,7 +42,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const adminNavigation = [
     { name: 'Trang chủ Admin', href: '/admin', icon: HomeIcon },
     { name: 'Quản lý chủ đề', href: '/admin/topics', icon: BookOpenIcon },
-    // Tương lai có thể thêm các tab quản trị khác tại đây
+    { name: 'Quản lý bộ flashcard', href: '/admin/flashcard-sets', icon: AcademicCapIcon },
+    { name: 'Quản lý người dùng', href: '/admin/users', icon: UserIcon },
+    
   ];
 
   const navigation = user?.role === 'admin' ? adminNavigation : userNavigation;

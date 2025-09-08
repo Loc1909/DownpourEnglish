@@ -9,7 +9,7 @@ const AdminHomePage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Bảng điều khiển Admin</h1>
+        <h1 className="text-2xl font-bold">Bảng điều khiển Admin</h1>
         <p className="text-gray-600 mt-1">Quản trị nội dung và tính năng hệ thống</p>
       </div>
 
@@ -21,9 +21,18 @@ const AdminHomePage: React.FC = () => {
           </Link>
         </Card>
 
-        {/* Chỗ để mở rộng các module quản trị khác sau này */}
-        <Card title="Sắp ra mắt">
-          <p className="text-gray-600">Trang quản trị khác sẽ được bổ sung sau.</p>
+        <Card title="Bộ flashcard">
+          <p className="text-gray-600 mb-4">Xóa bộ flashcard.</p>
+          <Link to="/admin/flashcard-sets">
+            <Button>Quản lý bộ flashcard</Button>
+          </Link>
+        </Card>
+
+        <Card title="Người dùng">
+          <p className="text-gray-600 mb-4">Sửa vai trò người dùng.</p>
+          <Link to="/admin/users">
+            <Button>Quản lý người dùng</Button>
+          </Link>
         </Card>
       </div>
     </div>
