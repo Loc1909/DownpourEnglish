@@ -4,8 +4,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { 
-  BookOpenIcon, 
+import {
+  BookOpenIcon,
   AcademicCapIcon,
   GlobeAltIcon,
   BriefcaseIcon,
@@ -13,13 +13,16 @@ import {
   MusicalNoteIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline';
-import { topicsAPI } from '../services/api';
+import { topicsAPI, flashcardSetsAPI } from '../services/api';
 import { Topic } from '../types';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
 import Button from '../components/common/Button';
 
 const TopicsPage: React.FC = () => {
+  const [openTopicId, setOpenTopicId] = React.useState<number | null>(null);
+  const [isLoadingAI, setIsLoadingAI] = React.useState(false);
+  const [aiSets, setAISets] = React.useState<any[]>([]);
   const { data: topicsResponse, isLoading, error } = useQuery({
     queryKey: ['topics'],
     queryFn: () => topicsAPI.getAll(),
@@ -37,7 +40,7 @@ const TopicsPage: React.FC = () => {
       'heart': HeartIcon,
       'musical-note': MusicalNoteIcon,
     };
-    
+
     return iconMap[iconName] || BookOpenIcon;
   };
 
@@ -94,6 +97,27 @@ const TopicsPage: React.FC = () => {
     );
   }
 
+
+
+  const handleOpenAISuggestions = async (topicId: number) => {
+    try {
+      setIsLoadingAI(true);
+      setOpenTopicId(topicId);
+      const res = await topicsAPI.getAISuggestions(topicId, { limit: 10 });
+      setAISets(res.data || []);
+    } catch (e) {
+      console.error(e);
+      setAISets([]);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
+  const closeModal = () => {
+    setOpenTopicId(null);
+    setAISets([]);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -111,7 +135,7 @@ const TopicsPage: React.FC = () => {
               Khám phá các chủ đề đa dạng và bắt đầu hành trình học từ vựng tiếng Anh của bạn
             </p>
           </div>
-          
+
         </div>
       </motion.div>
 
@@ -138,7 +162,7 @@ const TopicsPage: React.FC = () => {
                 <div className="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                   {/* Background Gradient */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${gradientColor} opacity-5 group-hover:opacity-10 transition-opacity`} />
-                  
+
                   {/* Content */}
                   <div className="relative p-8">
                     {/* Icon */}
@@ -164,17 +188,26 @@ const TopicsPage: React.FC = () => {
                           {topic.flashcard_sets_count} bộ flashcard
                         </span>
                       </div>
-                      
-                      <div className="flex items-center space-x-1 text-blue-600 group-hover:text-blue-700 transition-colors">
-                        <span className="text-sm font-medium">Khám phá</span>
-                        <svg 
-                          className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); handleOpenAISuggestions(topic.id); }}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                          Gợi ý AI
+                        </button>
+                        <div className="flex items-center space-x-1 text-blue-600 group-hover:text-blue-700 transition-colors">
+                          <span className="text-sm font-medium">Khám phá</span>
+                          <svg
+                            className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -184,6 +217,50 @@ const TopicsPage: React.FC = () => {
           );
         })}
       </motion.div>
+
+      {/* Modal Gợi ý AI */}
+      {openTopicId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">Gợi ý bộ flashcard bằng AI</h3>
+              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            {isLoadingAI ? (
+              <div className="py-10 flex justify-center"><LoadingSpinner /></div>
+            ) : aiSets.length === 0 ? (
+              <div className="py-10 text-center text-gray-600">Chưa có gợi ý phù hợp.</div>
+            ) : (
+              <div className="space-y-3 max-h-[60vh] overflow-auto">
+                {aiSets.map((set) => (
+                  <Link
+                    key={set.id}
+                    to={`/flashcard-sets/${set.id}`}
+                    onClick={closeModal}
+                    className="block border rounded-xl p-4 hover:bg-gray-50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-900">{set.title}</div>
+                        <div className="text-sm text-gray-600 line-clamp-2">{set.description}</div>
+                        <div className="mt-2 text-xs text-gray-500">Độ khó: {set.difficulty}</div>
+                      </div>
+                      <div className="text-right text-sm text-gray-500">
+                        <div>Lưu: {set.total_saves}</div>
+                        <div>Đánh giá: {set.average_rating?.toFixed?.(1) ?? set.average_rating}</div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 text-right">
+              <button onClick={closeModal} className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Call to Action */}
       <motion.div

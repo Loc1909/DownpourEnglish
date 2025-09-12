@@ -14,7 +14,7 @@ import {
   HeartIcon,
   Bars3Icon,
   XMarkIcon,
-  BellIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 

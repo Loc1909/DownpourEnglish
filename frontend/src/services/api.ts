@@ -21,7 +21,7 @@ export interface SavedFlashcardSet {
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -123,6 +123,10 @@ export const topicsAPI = {
   // This returns array, not paginated (custom action)
   getFlashcardSets: (topicId: number): Promise<AxiosResponse<FlashcardSet[]>> =>
     api.get(`/topics/${topicId}/flashcard-sets/`),
+
+  // AI suggestions for a topic (array, not paginated)
+  getAISuggestions: (topicId: number, params?: { limit?: number }): Promise<AxiosResponse<FlashcardSet[]>> =>
+    api.get(`/topics/${topicId}/ai-suggestions/`, { params }),
 };
 
 // Flashcard Sets API - Uses pagination for list
@@ -305,6 +309,40 @@ export const achievementsAPI = {
     new_achievements: Achievement[];
   }>> =>
     api.post('/achievements/check_achievements/'),
+};
+
+
+// RAG API (nội bộ)
+export const ragAPI = {
+  query: (data: {
+    topic_id?: number;
+    level?: 'beginner' | 'intermediate' | 'advanced';
+    count: number;
+    context?: string;
+    exclude_known?: boolean;
+  }): Promise<AxiosResponse<{ suggestions: Array<{
+    english: string;
+    vietnamese: string;
+    example_sentence_en?: string;
+    word_type?: string;
+    difficulty?: string;
+    source_set_id?: number;
+    source_set_title?: string;
+  }>; count: number }>> => api.post('/rag/query/', data),
+
+  createSet: (data: {
+    title: string;
+    topic_id: number;
+    is_public: boolean;
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    flashcards: Array<{
+      english: string;
+      vietnamese: string;
+      example_sentence_en?: string;
+      word_type?: string;
+    }>;
+  }): Promise<AxiosResponse<{ message: string; flashcard_set: FlashcardSet; created_count: number }>> =>
+    api.post('/rag/create_set/', data),
 };
 
 

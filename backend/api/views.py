@@ -6,6 +6,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db import transaction
 from math import ceil
+from django.core.exceptions import ValidationError
 
 from api.models import (
     User, Topic, FlashcardSet, Flashcard, SavedFlashcardSet,
@@ -14,7 +15,13 @@ from api.models import (
 )
 from api import serializers
 from api.achievement_service import AchievementService
+from api.ai_suggestion import AISuggestionService
+from typing import List, Dict, Any, Optional
 from api.permissions import IsUser, IsAdmin
+import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.UpdateAPIView,
@@ -53,6 +60,28 @@ class TopicViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
 
         serializer = serializers.FlashcardSetSerializer(
             sets, many=True, context={'request': request}
+        )
+        return Response(serializer.data)
+
+    @action(methods=['get'], detail=True, url_path='ai-suggestions')
+    def ai_suggestions(self, request, pk):
+        """Gợi ý các bộ flashcard phù hợp cho chủ đề bằng AI embeddings.
+
+        Query params:
+        - limit: số lượng kết quả (mặc định 10, tối đa 50)
+        """
+        topic = self.get_object()
+        try:
+            limit_param = request.query_params.get('limit')
+            limit = int(limit_param) if limit_param else 10
+            limit = max(1, min(50, limit))
+        except ValueError:
+            limit = 10
+
+        service = AISuggestionService.get_instance()
+        suggested_sets = service.suggest_sets_for_topic(topic=topic, top_k=limit)
+        serializer = serializers.FlashcardSetSerializer(
+            suggested_sets, many=True, context={'request': request}
         )
         return Response(serializer.data)
 
@@ -943,6 +972,8 @@ class AchievementViewSet(viewsets.ViewSet, generics.ListAPIView):
         serializer = serializers.UserAchievementSerializer(user_achievements, many=True)
         return Response(serializer.data)
 
+
+
     @action(methods=['post'], detail=False, permission_classes=[permissions.IsAuthenticated])
     def check_achievements(self, request):
         """Kiểm tra và trao thành tích mới cho user"""
@@ -997,3 +1028,5 @@ class UserFeedbackViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.Lis
         feedback = serializer.save(user=request.user)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
