@@ -7,7 +7,6 @@ from api.models import (
 
 
 class BaseSerializer(serializers.ModelSerializer):
-    """Base serializer với các phương thức chung"""
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -21,7 +20,7 @@ class BaseSerializer(serializers.ModelSerializer):
 
 class UserSerializer(BaseSerializer):
     password = serializers.CharField(write_only=True, required=False)
-    avatar = serializers.ImageField(required=False, allow_null=True)  # Thay đổi từ SerializerMethodField
+    avatar = serializers.ImageField(required=False, allow_null=True)
 
     def create(self, validated_data):
         # Lấy password và avatar trước khi tạo user
@@ -127,7 +126,7 @@ class FlashcardSetSerializer(BaseSerializer):
     creator = UserSerializer(read_only=True)
     topic = TopicSerializer(read_only=True)
     is_saved = serializers.SerializerMethodField()
-    is_favorite = serializers.SerializerMethodField()  # Thêm field này
+    is_favorite = serializers.SerializerMethodField()
     user_rating = serializers.SerializerMethodField()
 
     def get_is_saved(self, obj):
@@ -139,7 +138,6 @@ class FlashcardSetSerializer(BaseSerializer):
         return False
 
     def get_is_favorite(self, obj):
-        """Kiểm tra xem user có yêu thích bộ flashcard này không"""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             try:
@@ -288,7 +286,6 @@ class UpdateFlashcardSetSerializer(serializers.ModelSerializer):
 
 
 class StudySummarySerializer(serializers.Serializer):
-    """Serializer cho tổng hợp học tập"""
     total_sets_saved = serializers.IntegerField()
     total_cards_studied = serializers.IntegerField()
     total_time_spent = serializers.IntegerField()
@@ -299,7 +296,6 @@ class StudySummarySerializer(serializers.Serializer):
 
 
 class LeaderboardSerializer(serializers.Serializer):
-    """Serializer cho bảng xếp hạng"""
     user = UserSerializer()
     rank = serializers.IntegerField()
     total_points = serializers.IntegerField()

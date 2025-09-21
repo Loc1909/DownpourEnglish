@@ -64,7 +64,6 @@ class TopicAdmin(admin.ModelAdmin):
     ordering = ('name',)
     readonly_fields = ('created_at', 'icon_preview')
 
-    # Thêm trường icon_preview vào fieldsets
     fieldsets = (
         ('Thông tin cơ bản', {
             'fields': ('name', 'description')
@@ -82,7 +81,6 @@ class TopicAdmin(admin.ModelAdmin):
     )
 
     def icon_display(self, obj):
-        """Hiển thị icon nhỏ trong danh sách"""
         if obj.icon:
             return format_html(
                 '<i class="{}" style="font-size: 16px; color: #007cba;"></i> <span style="margin-left: 8px; font-size: 12px; color: #666;">{}</span>',
@@ -93,7 +91,6 @@ class TopicAdmin(admin.ModelAdmin):
     icon_display.short_description = 'Icon'
 
     def icon_preview(self, obj):
-        """Hiển thị icon lớn trong form chi tiết"""
         if obj.icon:
             return format_html(
                 '''
@@ -161,7 +158,6 @@ class TopicAdmin(admin.ModelAdmin):
         }
 
 
-# Inline for Flashcards in FlashcardSet
 class FlashcardInline(admin.TabularInline):
     model = Flashcard
     extra = 1
@@ -169,7 +165,6 @@ class FlashcardInline(admin.TabularInline):
     show_change_link = True
 
 
-# FlashcardSet Admin
 class FlashcardSetAdmin(admin.ModelAdmin):
     list_display = (
         'title', 'topic', 'creator', 'difficulty', 'total_cards', 'total_saves', 'average_rating', 'is_public',
@@ -220,7 +215,6 @@ class FlashcardSetAdmin(admin.ModelAdmin):
     update_card_counts.short_description = 'Cập nhật số lượng thẻ'
 
 
-# Flashcard Admin
 class FlashcardAdmin(admin.ModelAdmin):
     list_display = ('vietnamese', 'english', 'word_type', 'flashcard_set', 'created_at')
     list_filter = ('word_type', 'flashcard_set__topic', 'created_at')
@@ -242,16 +236,13 @@ class FlashcardAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        """Override để cập nhật số thẻ sau khi save"""
         super().save_model(request, obj, form, change)
-        # Signal sẽ tự động cập nhật, nhưng để chắc chắn:
         obj.flashcard_set.update_total_cards()
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('flashcard_set', 'flashcard_set__topic')
 
 
-# SavedFlashcardSet Admin
 class SavedFlashcardSetAdmin(admin.ModelAdmin):
     list_display = ('user', 'flashcard_set', 'is_favorite', 'rating', 'saved_at')
     list_filter = ('is_favorite', 'rating', 'saved_at')
@@ -263,7 +254,6 @@ class SavedFlashcardSetAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user', 'flashcard_set')
 
 
-# UserProgress Admin
 class UserProgressAdmin(admin.ModelAdmin):
     list_display = (
         'user', 'flashcard_display', 'mastery_level', 'accuracy_rate', 'times_reviewed', 'is_learned', 'is_difficult',
@@ -298,7 +288,6 @@ class UserProgressAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user', 'flashcard')
 
 
-# GameSession Admin
 class GameSessionAdmin(admin.ModelAdmin):
     list_display = (
         'user', 'game_type', 'score', 'accuracy_percentage', 'total_questions', 'time_spent', 'completed_at')
@@ -324,7 +313,6 @@ class GameSessionAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user')
 
 
-# Achievement Admin
 class AchievementAdmin(admin.ModelAdmin):
     list_display = ('name', 'achievement_type', 'rarity', 'requirement_value', 'points', 'is_active')
     list_filter = ('achievement_type', 'rarity', 'is_active')
@@ -383,7 +371,6 @@ class AchievementAdmin(admin.ModelAdmin):
         return form
 
 
-# UserAchievement Admin
 class UserAchievementAdmin(admin.ModelAdmin):
     list_display = ('user', 'achievement', 'progress_value', 'earned_at')
     list_filter = ('achievement__achievement_type', 'achievement__rarity', 'earned_at')
@@ -395,7 +382,6 @@ class UserAchievementAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user', 'achievement')
 
 
-# UserFeedback Admin
 class UserFeedbackAdmin(admin.ModelAdmin):
     list_display = ('user', 'flashcard_display', 'rating', 'is_processed', 'created_at')
     list_filter = ('rating', 'is_processed', 'created_at')
@@ -442,7 +428,6 @@ class UserFeedbackAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user', 'flashcard')
 
 
-# DailyStats Admin
 class DailyStatsAdmin(admin.ModelAdmin):
     list_display = ('user', 'date', 'cards_studied', 'time_spent', 'games_played', 'points_earned', 'accuracy_rate')
     list_filter = ('date', 'accuracy_rate')
@@ -466,7 +451,6 @@ class DailyStatsAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user')
 
 
-# Đăng ký các model với admin site
 admin.site.register(User, UserAdmin)
 admin.site.register(Topic, TopicAdmin)
 admin.site.register(FlashcardSet, FlashcardSetAdmin)
@@ -479,7 +463,6 @@ admin.site.register(UserAchievement, UserAchievementAdmin)
 admin.site.register(UserFeedback, UserFeedbackAdmin)
 admin.site.register(DailyStats, DailyStatsAdmin)
 
-# Tùy chỉnh admin site
 admin.site.site_header = "Flashcard App Admin"
 admin.site.site_title = "Flashcard Admin"
 admin.site.index_title = "Quản lý ứng dụng Flashcard"

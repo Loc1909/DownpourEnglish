@@ -1,5 +1,3 @@
-// src/pages/TopicsPage.tsx
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -28,7 +26,6 @@ const TopicsPage: React.FC = () => {
     queryFn: () => topicsAPI.getAll(),
   });
 
-  // Bây giờ lấy data từ response.data.results (đúng với PaginatedResponse)
   const topics: Topic[] = topicsResponse?.data?.results || [];
 
   const getTopicIcon = (iconName: string) => {

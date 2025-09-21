@@ -1,5 +1,3 @@
-// src/pages/auth/LoginPage.tsx
-
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -66,7 +64,7 @@ const LoginPage: React.FC = () => {
     try {
       await login(formData.username, formData.password);
     } catch (error) {
-      // Error is handled in the store
+ 
     }
   };
 

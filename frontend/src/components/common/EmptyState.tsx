@@ -1,5 +1,3 @@
-// src/components/common/EmptyState.tsx
-
 import React from 'react';
 import { motion } from 'framer-motion';
 

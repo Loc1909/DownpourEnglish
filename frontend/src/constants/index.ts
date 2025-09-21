@@ -1,6 +1,3 @@
-// src/constants/index.ts
-
-// API Constants
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/users/login/',
@@ -20,7 +17,7 @@ export const API_ENDPOINTS = {
   FEEDBACK: '/feedback/',
 };
 
-// Game Types
+
 export const GAME_TYPES = {
   WORD_MATCH: 'word_match',
   GUESS_WORD: 'guess_word',
@@ -33,7 +30,7 @@ export const GAME_TYPE_LABELS = {
   [GAME_TYPES.CROSSWORD]: 'Ô chữ',
 };
 
-// Difficulty Levels
+
 export const DIFFICULTY_LEVELS = {
   BEGINNER: 'beginner',
   INTERMEDIATE: 'intermediate',
@@ -52,7 +49,7 @@ export const DIFFICULTY_COLORS = {
   [DIFFICULTY_LEVELS.ADVANCED]: 'text-red-600 bg-red-100',
 };
 
-// Word Types
+
 export const WORD_TYPES = {
   NOUN: 'noun',
   VERB: 'verb',
@@ -71,7 +68,7 @@ export const WORD_TYPE_LABELS = {
   [WORD_TYPES.OTHER]: 'Khác',
 };
 
-// Achievement Types
+
 export const ACHIEVEMENT_TYPES = {
   LEARNING: 'learning',
   GAMING: 'gaming',
@@ -86,7 +83,7 @@ export const ACHIEVEMENT_TYPE_LABELS = {
   [ACHIEVEMENT_TYPES.MILESTONE]: 'Cột mốc',
 };
 
-// Rarity Levels
+
 export const RARITY_LEVELS = {
   COMMON: 'common',
   UNCOMMON: 'uncommon',
@@ -111,7 +108,7 @@ export const RARITY_COLORS = {
   [RARITY_LEVELS.LEGENDARY]: 'text-yellow-600 bg-yellow-100',
 };
 
-// Mastery Levels
+
 export const MASTERY_LEVELS = {
   NEW: { min: 0, max: 20, label: 'Mới học', color: 'text-red-600 bg-red-100' },
   LEARNING: { min: 21, max: 50, label: 'Đang học', color: 'text-orange-600 bg-orange-100' },
@@ -120,7 +117,7 @@ export const MASTERY_LEVELS = {
   MASTERED: { min: 96, max: 100, label: 'Thành thạo', color: 'text-blue-600 bg-blue-100' },
 };
 
-// Local Storage Keys
+
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'authToken',
   FIREBASE_TOKEN: 'firebaseToken',
@@ -129,7 +126,7 @@ export const STORAGE_KEYS = {
   GAME_SETTINGS: 'gameSettings',
 };
 
-// Query Keys for React Query
+
 export const QUERY_KEYS = {
   AUTH: ['auth'],
   USER: ['user'],
@@ -146,7 +143,7 @@ export const QUERY_KEYS = {
   LEADERBOARD: ['leaderboard'],
 };
 
-// Validation Rules
+
 export const VALIDATION_RULES = {
   USERNAME: {
     MIN_LENGTH: 3,
@@ -171,13 +168,13 @@ export const VALIDATION_RULES = {
   },
 };
 
-// Pagination
+
 export const PAGINATION = {
   DEFAULT_PAGE_SIZE: 20,
   MAX_PAGE_SIZE: 100,
 };
 
-// Time Constants
+
 export const TIME_CONSTANTS = {
   DEBOUNCE_DELAY: 300,
   TOAST_DURATION: 4000,
@@ -185,14 +182,14 @@ export const TIME_CONSTANTS = {
   LOADING_SPINNER_DELAY: 500,
 };
 
-// URLs
+
 export const EXTERNAL_URLS = {
   GITHUB: 'https://github.com',
   DOCS: 'https://docs.example.com',
   SUPPORT: 'mailto:support@example.com',
 };
 
-// Feature Flags
+
 export const FEATURE_FLAGS = {
   ENABLE_DARK_MODE: false,
   ENABLE_NOTIFICATIONS: true,

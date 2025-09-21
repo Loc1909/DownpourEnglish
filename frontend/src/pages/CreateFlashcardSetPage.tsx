@@ -1,5 +1,3 @@
-// src/pages/CreateFlashcardSetPage.tsx
-
 import React, { useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -31,8 +29,6 @@ const CreateFlashcardSetPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-
-  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<number | null>(null);

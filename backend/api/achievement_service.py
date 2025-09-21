@@ -1,7 +1,3 @@
-"""
-Service để xử lý logic trao thành tích tự động cho user
-"""
-from django.db.models import Count, Sum, Q, F, Max
 from django.utils import timezone
 from datetime import timedelta
 from .models import (
@@ -11,14 +7,8 @@ from .models import (
 
 
 class AchievementService:
-    """Service xử lý thành tích"""
-    
     @staticmethod
     def check_and_award_achievements(user):
-        """
-        Kiểm tra và trao thành tích cho user
-        Trả về danh sách thành tích mới đạt được
-        """
         new_achievements = []
         
         # Kiểm tra các loại thành tích khác nhau
@@ -31,7 +21,6 @@ class AchievementService:
     
     @staticmethod
     def _check_learning_achievements(user):
-        """Kiểm tra thành tích học tập"""
         new_achievements = []
         
         # Thành tích học từ vựng mới
@@ -61,7 +50,6 @@ class AchievementService:
     
     @staticmethod
     def _check_gaming_achievements(user):
-        """Kiểm tra thành tích chơi game"""
         new_achievements = []
         
         # Số ván game đã chơi
@@ -88,13 +76,10 @@ class AchievementService:
     
     @staticmethod
     def _check_streak_achievements(user):
-        """Kiểm tra thành tích chuỗi ngày"""
         new_achievements = []
-        
-        # Tính chuỗi ngày học liên tiếp
+
         current_streak = AchievementService._calculate_current_streak(user)
-        
-        # Kiểm tra và trao thành tích
+
         streak_achievements = Achievement.objects.filter(
             achievement_type='streak',
             is_active=True
@@ -110,13 +95,10 @@ class AchievementService:
     
     @staticmethod
     def _check_milestone_achievements(user):
-        """Kiểm tra thành tích cột mốc"""
         new_achievements = []
-        
-        # Số bộ flashcard đã lưu
+
         saved_sets_count = SavedFlashcardSet.objects.filter(user=user).count()
-        
-        # Kiểm tra và trao thành tích
+
         milestone_achievements = Achievement.objects.filter(
             achievement_type='milestone',
             is_active=True
@@ -141,7 +123,6 @@ class AchievementService:
     
     @staticmethod
     def _calculate_current_streak(user):
-        """Tính chuỗi ngày học liên tiếp hiện tại"""
         today = timezone.now().date()
         current_streak = 0
         
@@ -171,7 +152,6 @@ class AchievementService:
     
     @staticmethod
     def _should_award_achievement(user, achievement):
-        """Kiểm tra xem user có nên được trao thành tích này không"""
         # Kiểm tra xem user đã có thành tích này chưa
         return not UserAchievement.objects.filter(
             user=user, 
@@ -180,7 +160,7 @@ class AchievementService:
     
     @staticmethod
     def _award_achievement(user, achievement, progress_value):
-        """Trao thành tích cho user"""
+        # Trao thành tích cho user
         try:
             # Tạo UserAchievement
             user_achievement = UserAchievement.objects.create(
@@ -200,7 +180,7 @@ class AchievementService:
     
     @staticmethod
     def award_registration_achievement(user):
-        """Trao thành tích đăng ký tài khoản"""
+        # Trao thành tích đăng ký tài khoản
         try:
             achievement = Achievement.objects.get(
                 name='Người dùng đầu tiên',
@@ -218,7 +198,7 @@ class AchievementService:
     
     @staticmethod
     def get_user_progress_for_achievement(user, achievement):
-        """Lấy tiến trình của user cho một thành tích cụ thể"""
+        # Lấy tiến trình của user cho một thành tích cụ thể
         try:
             user_achievement = UserAchievement.objects.get(
                 user=user, 
@@ -231,7 +211,7 @@ class AchievementService:
     
     @staticmethod
     def _calculate_progress_for_achievement(user, achievement):
-        """Tính toán tiến trình hiện tại cho một thành tích"""
+        # Tính toán tiến trình hiện tại cho một thành tích
         if achievement.achievement_type == 'learning':
             desc = (achievement.description or '').lower()
             if 'từ vựng' in desc:

@@ -1,5 +1,3 @@
-// src/pages/StatsPage.tsx
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 

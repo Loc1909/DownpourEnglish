@@ -7,7 +7,6 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 
-# Custom User Model
 class User(AbstractUser):
     ROLE_CHOICES = [
         ('user', 'User'),
@@ -31,7 +30,6 @@ class User(AbstractUser):
         return self.role == 'admin'
 
 
-# Model cho chủ đề
 class Topic(models.Model):
     name = models.CharField(max_length=100, verbose_name="Tên chủ đề")
     description = models.TextField(blank=True, verbose_name="Mô tả")
@@ -48,7 +46,6 @@ class Topic(models.Model):
         return self.name
 
 
-# Model cho bộ flashcard
 class FlashcardSet(models.Model):
     DIFFICULTY_CHOICES = [
         ('beginner', 'Cơ bản'),
@@ -83,12 +80,10 @@ class FlashcardSet(models.Model):
         return self.title
 
     def update_total_cards(self):
-        """Cập nhật tổng số thẻ"""
         self.total_cards = self.flashcards.count()
         self.save(update_fields=['total_cards'])
 
     def update_average_rating(self):
-        """Cập nhật điểm trung bình"""
         from django.db.models import Avg
         avg_rating = SavedFlashcardSet.objects.filter(
             flashcard_set=self,
@@ -99,12 +94,10 @@ class FlashcardSet(models.Model):
         self.save(update_fields=['average_rating'])
 
     def update_total_saves(self):
-        """Cập nhật tổng lượt lưu"""
         self.total_saves = SavedFlashcardSet.objects.filter(flashcard_set=self).count()
         self.save(update_fields=['total_saves'])
 
 
-# Model cho thẻ flashcard riêng lẻ
 class Flashcard(models.Model):
     flashcard_set = models.ForeignKey(FlashcardSet, related_name='flashcards', on_delete=models.CASCADE)
     vietnamese = models.CharField(max_length=500, verbose_name="Tiếng Việt")
@@ -140,7 +133,6 @@ class Flashcard(models.Model):
         return f"{self.vietnamese} - {self.english}"
 
 
-# Model lưu bộ flashcard của người dùng
 class SavedFlashcardSet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Người dùng")
     flashcard_set = models.ForeignKey(FlashcardSet, on_delete=models.CASCADE, verbose_name="Bộ flashcard")
@@ -161,7 +153,6 @@ class SavedFlashcardSet(models.Model):
         return f"{self.user.username} - {self.flashcard_set.title}"
 
 
-# Model tiến trình học của người dùng
 class UserProgress(models.Model):
     DIFFICULTY_LEVELS = [
         (1, 'Rất khó'),
@@ -210,7 +201,6 @@ class UserProgress(models.Model):
         return round((self.times_correct / self.times_reviewed) * 100, 1)
 
 
-# Model cho các trò chơi mini
 class GameSession(models.Model):
     GAME_TYPES = [
         ('word_match', 'Ghép từ nhanh'),
@@ -245,7 +235,6 @@ class GameSession(models.Model):
         return round((self.correct_answers / self.total_questions) * 100, 1)
 
 
-# Model thành tích và huy hiệu
 class Achievement(models.Model):
     ACHIEVEMENT_TYPES = [
         ('learning', 'Học tập'),
@@ -283,7 +272,6 @@ class Achievement(models.Model):
         return self.name
 
 
-# Model thành tích của người dùng
 class UserAchievement(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Người dùng")
     achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE, verbose_name="Thành tích")
@@ -300,7 +288,6 @@ class UserAchievement(models.Model):
         return f"{self.user.username} - {self.achievement.name}"
 
 
-# Model phản hồi người dùng - Chỉ cho từ vựng
 class UserFeedback(models.Model):
     RATING_CHOICES = [
         (1, '1 sao - Rất khó'),
@@ -331,7 +318,6 @@ class UserFeedback(models.Model):
         return f"Feedback từ {self.user.username} cho '{self.flashcard.vietnamese}' - {self.rating} sao"
 
 
-# Model thống kê học tập hàng ngày
 class DailyStats(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Người dùng")
     date = models.DateField(verbose_name="Ngày")
@@ -355,19 +341,16 @@ class DailyStats(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.date}"
 
-    # SIGNALS - Tự động cập nhật khi có thay đổi
 
 
 @receiver(post_save, sender=Flashcard)
 def update_flashcard_count_on_save(sender, instance, created, **kwargs):
-    """Cập nhật số thẻ khi thêm flashcard mới"""
     if created:
         instance.flashcard_set.update_total_cards()
 
 
 @receiver(post_delete, sender=Flashcard)
 def update_flashcard_count_on_delete(sender, instance, **kwargs):
-    """Cập nhật số thẻ khi xóa flashcard"""
     try:
         instance.flashcard_set.update_total_cards()
     except FlashcardSet.DoesNotExist:
@@ -376,7 +359,6 @@ def update_flashcard_count_on_delete(sender, instance, **kwargs):
 
 @receiver(post_save, sender=SavedFlashcardSet)
 def update_flashcard_set_stats_on_save(sender, instance, created, **kwargs):
-    """Cập nhật thống kê khi lưu/đánh giá bộ flashcard"""
     instance.flashcard_set.update_total_saves()
     if instance.rating:
         instance.flashcard_set.update_average_rating()
@@ -384,7 +366,6 @@ def update_flashcard_set_stats_on_save(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=SavedFlashcardSet)
 def update_flashcard_set_stats_on_delete(sender, instance, **kwargs):
-    """Cập nhật thống kê khi bỏ lưu bộ flashcard"""
     try:
         instance.flashcard_set.update_total_saves()
         instance.flashcard_set.update_average_rating()

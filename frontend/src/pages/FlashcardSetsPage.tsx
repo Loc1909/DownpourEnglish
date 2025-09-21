@@ -1,5 +1,3 @@
-// src/pages/FlashcardSetsPage.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';

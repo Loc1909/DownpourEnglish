@@ -1,5 +1,3 @@
-// src/pages/AdminTopicsPage.tsx
-
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { topicsAPI } from '../services/api';

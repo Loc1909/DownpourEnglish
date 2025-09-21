@@ -1,5 +1,3 @@
-// src/components/common/Badge.tsx
-
 import React from 'react';
 
 interface BadgeProps {
@@ -40,6 +38,3 @@ const Badge: React.FC<BadgeProps> = ({
 };
 
 export default Badge;
-
-// ============================================
-

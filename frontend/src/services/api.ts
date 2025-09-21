@@ -1,5 +1,3 @@
-// src/services/api.ts
-
 import axios, { AxiosResponse } from 'axios';
 import { 
   User, Topic, FlashcardSet, Flashcard, GameSession, 
@@ -235,11 +233,11 @@ export const flashcardsAPI = {
 
 // User API
 export const userAPI = {
-  // This returns object, not paginated (custom action)
+
   getStudySummary: (): Promise<AxiosResponse<StudySummary>> =>
     api.get('/users/study_summary/'),
   
-  // This returns array, not paginated (custom action)
+
   getSavedSets: (): Promise<AxiosResponse<SavedFlashcardSet[]>> =>
     api.get('/users/saved_sets/'),
   

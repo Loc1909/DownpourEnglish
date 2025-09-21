@@ -20,9 +20,6 @@ if not firebase_admin._apps:
 
 
 class FirebaseAuthentication(BaseAuthentication):
-    """
-    Custom authentication class for Firebase tokens
-    """
 
     def authenticate(self, request):
         # Get Firebase token from header
@@ -31,7 +28,7 @@ class FirebaseAuthentication(BaseAuthentication):
         if not firebase_token:
             return None
 
-        # Remove 'Bearer ' prefix if present
+
         if firebase_token.startswith('Bearer '):
             firebase_token = firebase_token[7:]
 
@@ -94,9 +91,7 @@ class FirebaseAuthentication(BaseAuthentication):
 
 
 def get_firebase_user_info(firebase_token):
-    """
-    Helper function to get user info from Firebase token
-    """
+
     try:
         decoded_token = auth.verify_id_token(firebase_token)
         return {
@@ -111,9 +106,7 @@ def get_firebase_user_info(firebase_token):
 
 
 def create_custom_token(uid):
-    """
-    Create custom Firebase token for testing
-    """
+
     try:
         custom_token = auth.create_custom_token(uid)
         return custom_token.decode('utf-8')

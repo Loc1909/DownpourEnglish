@@ -1,5 +1,3 @@
-// src/components/common/AchievementIcon.tsx
-
 import React from 'react';
 import {
   TrophyIcon,
@@ -66,7 +64,6 @@ const AchievementIcon: React.FC<AchievementIconProps> = ({
     legendary: 'text-yellow-500'
   };
   
-// Chỉ áp dụng màu độ hiếm nếu useRarityColor là true và không có class màu trong className
 const shouldUseRarityColor = useRarityColor && !className.includes('text-');
 const colorClass = shouldUseRarityColor 
   ? (rarityColors[rarity as keyof typeof rarityColors] || rarityColors.common)

@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 class AISuggestionService:
     """Service gợi ý bộ flashcard theo chủ đề bằng embeddings (SBERT/FAISS) với fallback an toàn.
-
     - Nếu không cài được thư viện ML, sẽ fallback sang xếp hạng theo mức độ phổ biến/đánh giá.
     - Thiết kế dạng singleton để dùng chung model/encoder trong process.
     """
@@ -23,19 +22,15 @@ class AISuggestionService:
     def __init__(self) -> None:
         self._encoder = None
         self._use_embeddings = False
-        # Thử nạp sentence-transformers; nếu thất bại thì bật fallback
         try:
-
-            # Model nhẹ, open-source: all-MiniLM-L6-v2
             self._encoder = SentenceTransformer("all-MiniLM-L6-v2")
             self._use_embeddings = True
             logger.info("AISuggestionService: Loaded SBERT model all-MiniLM-L6-v2")
-            # Warm-up để tránh request đầu chậm (download/tải trọng số)
             try:
                 _ = self._encoder.encode(["warmup"], normalize_embeddings=True, convert_to_numpy=True)
-            except Exception as warmup_exc:  # pragma: no cover - env dependent
+            except Exception as warmup_exc:
                 logger.warning("AISuggestionService: warm-up encode failed: %s", warmup_exc)
-        except Exception as exc:  # pragma: no cover - env dependent
+        except Exception as exc:
             logger.warning(
                 "AISuggestionService: sentence-transformers not available, falling back. Error: %s",
                 exc,
@@ -83,7 +78,6 @@ class AISuggestionService:
         scores = np.dot(set_embeds, query) # tính độ tương đồng
         # Lấy top_k theo điểm giảm dần
         top_indices = np.argsort(-scores)[:top_k]
-        #ranked = [sets_list[i] for i in top_indices]
         ranked = [
             {"set": sets_list[i], "score": float(scores[i])}
             for i in top_indices

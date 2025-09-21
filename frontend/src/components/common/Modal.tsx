@@ -1,5 +1,3 @@
-// src/components/common/Modal.tsx
-
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';

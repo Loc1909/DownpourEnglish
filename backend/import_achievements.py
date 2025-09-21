@@ -1,25 +1,15 @@
-#!/usr/bin/env python
-"""
-Script để import dữ liệu thành tích vào Django
-Chạy script này sau khi đã setup Django và database
-"""
-
 import os
 import sys
 import django
 
-# Thêm đường dẫn backend vào Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()
-
 from api.models import Achievement, UserAchievement
 
 def import_achievements():
-    """Import dữ liệu thành tích vào database"""
-    
+
+
     # Xóa dữ liệu cũ
     print("Đang xóa dữ liệu thành tích cũ...")
     UserAchievement.objects.all().delete()
@@ -105,7 +95,6 @@ def import_achievements():
         print(f"  • {achievement.name} ({achievement.achievement_type}) - {achievement.points} điểm")
 
 def main():
-    """Hàm chính"""
     print("🚀 Bắt đầu import dữ liệu thành tích...")
     print("=" * 50)
     
